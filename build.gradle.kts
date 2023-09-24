@@ -24,10 +24,10 @@ group = "crackers.kobots"
 version = "0.0.1"
 
 dependencies {
-    // these are API because the assumption is that's why this library is being used
-    api("crackers.kobots:kobots-devices:$DEVICES_VER")
-    api("org.json:json:20230227")
-    api("com.typesafe:config:1.4.2")
+    // these are likely to be the ones in use
+    compileOnly("crackers.kobots:kobots-devices:$DEVICES_VER")
+    compileOnly("org.json:json:20230227")
+    compileOnly("com.typesafe:config:1.4.2")
 
     // optional parts
     compileOnly("crackers.automation:hassk:0.0.1") {
@@ -37,6 +37,7 @@ dependencies {
 
     testImplementation("io.kotest:kotest-runner-junit5:5.6.2")
     testImplementation("io.mockk:mockk:1.13.5")
+    testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
 }
 
 kotlin {

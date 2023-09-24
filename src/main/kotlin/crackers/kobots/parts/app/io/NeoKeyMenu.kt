@@ -67,13 +67,10 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
 
     private val currentMenuItem = AtomicInteger(0)
 
-    private val nextMenuItem = MenuItem(
-        "Next",
-        abbrev = "\u25B7",
-        buttonColor = Color.BLUE,
-        icon = loadImage("/arrow_forward.png")
-    ) {
-        rotateMenu(currentMenuItem.get() + maxKeys)
+    private val nextMenuItem by lazy {
+        MenuItem("Next", abbrev = "\u25B7", buttonColor = Color.BLUE, icon = loadImage("/arrow_forward.png")) {
+            rotateMenu(currentMenuItem.get() + maxKeys)
+        }
     }
 
     private fun rotateMenu(proposed: Int) {
