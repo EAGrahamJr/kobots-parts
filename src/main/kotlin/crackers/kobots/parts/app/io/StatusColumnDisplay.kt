@@ -16,7 +16,7 @@
 
 package crackers.kobots.parts.app.io
 
-import crackers.kobots.utilities.center
+import crackers.kobots.app.AppCommon.center
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D

@@ -16,7 +16,7 @@
 
 package crackers.kobots.parts.app.io
 
-import crackers.kobots.utilities.loadImage
+import crackers.kobots.app.AppCommon.loadImage
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.Image

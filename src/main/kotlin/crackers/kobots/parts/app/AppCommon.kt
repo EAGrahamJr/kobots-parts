@@ -18,9 +18,9 @@ package crackers.kobots.app
 
 import com.typesafe.config.ConfigFactory
 import crackers.hassk.HAssKClient
+import crackers.kobots.parts.app.KobotSleep
 import crackers.kobots.parts.app.KobotsEvent
 import crackers.kobots.parts.app.publishToTopic
-import crackers.kobots.utilities.KobotSleep
 import org.json.JSONObject
 import java.awt.Color
 import java.awt.FontMetrics
