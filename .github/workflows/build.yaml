@@ -1,0 +1,49 @@
+name: Basic Gradle Build
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - "*.md"
+      - "docs/**"
+  workflow_dispatch:
+
+jobs:
+  just-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: "temurin"
+      # plugins
+      - name: Checkout and build plugins
+        uses: actions/checkout@v3
+        with:
+          repository: EAGrahamJr/gradle-scripts
+          path: gradle-scripts
+      - name: Build plugins
+        run: |
+          cd gradle-scripts
+          ./gradlew --no-daemon --quiet build publishToMavenLocal
+      # diozero
+      - name: Checkout and build 'diozero'
+        uses: actions/checkout@v3
+        with:
+          repository: EAGrahamJr/diozero
+          ref: main
+          path: diozero
+      - name: Build diozero
+        run: |
+          cd diozero
+          mvn --quiet --batch-mode -DskipTests install
+      # BUILD IT
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build
+        run: ./gradlew --no-daemon build

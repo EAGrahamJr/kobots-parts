@@ -1,5 +1,7 @@
 # Parts is Parts
 
+![Just Build](https://github.com/EAGrahamJr/kobots-parts/actions/workflows/build.yaml/badge.svg) ![Kotlin](https://badgen.net/badge/Kotlin/1.9.0/purple) ![Java](https://badgen.net/badge/Java/17/orange) ![Apache License](https://badgen.net/github/license/EAGrahamJr/kobots-devices)
+
 Contains basic application construction elements that are being used in my various Kobots-related projects. This became desirable after it became apparent that these elements were being repeated across the projects via copy/pasta with tweaks.
 
 - Generic application "junk"
