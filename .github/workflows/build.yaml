@@ -42,6 +42,26 @@ jobs:
         run: |
           cd diozero
           mvn --quiet --batch-mode -DskipTests install
+      # hassK
+      - name: Checkout and build hassk
+        uses: actions/checkout@v3
+        with:
+          repository: EAGrahamJr/HAssK
+          path: hassk
+      - name: Build hassk
+        run: |
+          cd hassk
+          ./gradlew --no-daemon --quiet build publishToMavenLocal
+      # kobots-devices
+      - name: Checkout and build kobots-devices
+        uses: actions/checkout@v3
+        with:
+          repository: EAGrahamJr/kobots-devices
+          path: kobots-devices
+      - name: Build kobots-devices
+        run: |
+          cd kobots-devices
+          ./gradlew --no-daemon --quiet build publishToMavenLocal
       # BUILD IT
       - name: Checkout
         uses: actions/checkout@v3
