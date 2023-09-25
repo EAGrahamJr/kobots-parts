@@ -60,10 +60,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
         override fun disconnected(disconnectResponse: MqttDisconnectResponse) {
             logger.error("Disconnected: ${disconnectResponse.exception}")
             // kill the alive-checker
-            if (::aliveCheckFuture.isInitialized) {
-                logger.error("Stopping alive-check")
-                aliveCheckFuture.cancel(true)
-            }
+            cancelAliveCheck()
         }
 
         override fun mqttErrorOccurred(exception: MqttException) {
@@ -113,12 +110,17 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
         aliveCheckEnabled.set(true)
         if (aliveCheckInterval != intervalSeconds) aliveCheckInterval = intervalSeconds
         logger.warn("Starting alive-check at $intervalSeconds seconds")
+        launchAliveCheck()
     }
 
     /**
      * Launch the alive-check on (re-)connect.
      */
     private fun launchAliveCheck() {
+        // make sure it's not running
+        cancelAliveCheck()
+
+        // fire it up
         aliveCheckFuture = executor.scheduleAtFixedRate(
             {
                 if (mqttClient.isConnected) {
@@ -132,6 +134,13 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
             TimeUnit.SECONDS
         )
         logger.warn("Started alive-check at $aliveCheckInterval seconds")
+    }
+
+    private fun cancelAliveCheck() {
+        if (::aliveCheckFuture.isInitialized) {
+            logger.error("Stopping alive-check")
+            aliveCheckFuture.cancel(true)
+        }
     }
 
     private val lastCheckIn = mutableMapOf<String, ZonedDateTime>()
