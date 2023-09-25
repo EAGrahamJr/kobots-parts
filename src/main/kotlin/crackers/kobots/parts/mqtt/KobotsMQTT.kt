@@ -36,10 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Because of the current default Qos, any actual persistence is not used.
  */
-class KobotsMQTT(private val clientName: String, broker: String, persistence: MqttClientPersistence? = null) :
-    AutoCloseable {
+class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable {
     private val logger = LoggerFactory.getLogger("${clientName}MQTT")
-    private val subscribers = mutableMapOf<String, List<(String) -> Unit>>()
+    private val subscribers = mutableMapOf<String, MutableSet<(String) -> Unit>>()
     private var aliveCheckInterval = 60L
     private lateinit var aliveCheckFuture: ScheduledFuture<*>
     private val aliveCheckEnabled = AtomicBoolean(false)
@@ -51,7 +50,7 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
             keepAliveInterval = 10
             connectionTimeout = 10
         }
-        MqttAsyncClient(broker, clientName, persistence).apply {
+        MqttAsyncClient(broker, clientName).apply {
             setCallback(mqttCallback)
             connect(options).waitForCompletion()
         }
@@ -74,14 +73,19 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
         override fun connectComplete(reconnect: Boolean, serverURI: String?) {
             if (reconnect) {
                 logger.error("Re-connected")
-                // kill the old alive-checkser and start a new one
-                if (aliveCheckEnabled.get()) {
-                    startAliveCheck(aliveCheckInterval)
-                } else {
-                    logger.warn("Alive-check is not enabled")
+                // re-subscribing -- because QoS is 0 and clean start sessions
+                subscribers.forEach { (topic, listeners) ->
+                    logger.warn("Re-subscribing to $topic")
+                    listeners.forEach { addListener(topic, it) }
                 }
             } else {
                 logger.warn("Connected")
+            }
+            // start alive-check
+            if (aliveCheckEnabled.get()) {
+                launchAliveCheck()
+            } else {
+                logger.warn("Alive-check is not enabled")
             }
         }
 
@@ -106,9 +110,15 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
      * If the connection is lost, the heartbeat will stop and restart when the connection is re-established.
      */
     fun startAliveCheck(intervalSeconds: Long = 30) {
-        aliveCheckEnabled.compareAndExchange(false, true)
+        aliveCheckEnabled.set(true)
         if (aliveCheckInterval != intervalSeconds) aliveCheckInterval = intervalSeconds
         logger.warn("Starting alive-check at $intervalSeconds seconds")
+    }
+
+    /**
+     * Launch the alive-check on (re-)connect.
+     */
+    private fun launchAliveCheck() {
         aliveCheckFuture = executor.scheduleAtFixedRate(
             {
                 if (mqttClient.isConnected) {
@@ -117,11 +127,11 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
                     logger.warn("Not connected, skipping alive check")
                 }
             },
-            intervalSeconds / 2,
-            intervalSeconds,
+            aliveCheckInterval / 2,
+            aliveCheckInterval,
             TimeUnit.SECONDS
         )
-        logger.warn("Started alive-check at $intervalSeconds seconds")
+        logger.warn("Started alive-check at $aliveCheckInterval seconds")
     }
 
     private val lastCheckIn = mutableMapOf<String, ZonedDateTime>()
@@ -129,8 +139,6 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
     /**
      * Listens for `KOBOTS_ALIVE` messages and tracks the last time a message was received from each host. The [listener]
      * is called when a host has not been seen for [deadIntervalSeconds] seconds.
-     *
-     * TODO this needs re-think
      */
     fun handleAliveCheck(listener: (String) -> Unit = {}, deadIntervalSeconds: Long = 30) {
         // store everybody's last time
@@ -147,18 +155,21 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
     }
 
     /**
-     * Subscribe to a topic. The [listener] is called when a message is received.
+     * Subscribe to a topic. The [listener] is called when a message is received. Note that adding a subscriber
+     * multiple times may cause issues with the underlying MQTT client.
      */
     fun subscribe(topic: String, listener: (String) -> Unit) {
-        // assume the users of this will only call it once
+        // only subscribe a listener once
         subscribers.compute(topic) { _, list ->
-            if (list == null) {
-                listOf(listener)
-            } else {
-                list + listener
-            }
+            list?.apply { add(listener) } ?: mutableSetOf(listener)
         }
+        addListener(topic, listener)
+    }
 
+    /**
+     * Add a listener to a topic.
+     */
+    private fun addListener(topic: String, listener: (String) -> Unit) {
         val sub = MqttSubscription(topic, 0)
         // STUPID FUCKING BUG!!!!
         val props = MqttProperties().apply {
@@ -172,16 +183,30 @@ class KobotsMQTT(private val clientName: String, broker: String, persistence: Mq
             }
         }
         mqttClient.subscribe(arrayOf(sub), null, null, wrapper, props).waitForCompletion()
-        logger.warn("Subscribed to topic $topic")
+        logger.info("Subscribed to topic $topic")
     }
 
-    fun publish(topic: String, payload: String) {
+    /**
+     * Publish a message to the topic. All errors are only logged, keeping in line with a QoS of 0.
+     */
+    fun publish(topic: String, payload: String) = publish(topic, payload.toByteArray())
+    fun publish(topic: String, payload: ByteArray) {
         try {
-            mqttClient.publish(topic, MqttMessage(payload.toByteArray())).waitForCompletion()
+            mqttClient.publish(topic, MqttMessage(payload)).waitForCompletion()
         } catch (t: Throwable) {
             logger.error("Publisher error", t)
         }
     }
+
+    /**
+     * Quasi-extention operator that allows publishing by using map notation:
+     *
+     * ```
+     * mqtt["topic"] = "payload"
+     * ```
+     */
+    operator fun set(topic: String, payload: String) = publish(topic, payload.toByteArray())
+    operator fun set(topic: String, payload: ByteArray) = publish(topic, payload)
 
     override fun close() {
         mqttClient.close()
