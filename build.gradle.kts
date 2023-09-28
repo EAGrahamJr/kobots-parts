@@ -18,7 +18,7 @@ repositories {
 }
 
 val DIOZERO_VER = "1.4.0"
-val DEVICES_VER = "0.2.0"
+val DEVICES_VER = "0.2.1"
 
 group = "crackers.kobots"
 version = "0.0.3"
