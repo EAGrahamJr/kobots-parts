@@ -16,7 +16,7 @@
 
 package crackers.kobots.parts.app.io
 
-import crackers.kobots.app.AppCommon.loadImage
+import crackers.kobots.parts.loadImage
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.Image
@@ -97,12 +97,10 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
     }
 
     /**
-     * Executes the action described for the "first" button pressed.
+     * Executes the action described for the "first" button pressed. Returns `true` if the action was executed.
      */
     @Synchronized
-    open fun firstButton() {
-        execute().firstOrNull()?.second?.action?.invoke()
-    }
+    open fun firstButton(): Boolean = execute().firstOrNull()?.second?.action?.invoke()?.let { true } ?: false
 
     /**
      * Sets up the sub-selection of menu items and displays them.

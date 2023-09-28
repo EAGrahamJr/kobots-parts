@@ -21,32 +21,67 @@ import crackers.hassk.HAssKClient
 import crackers.kobots.parts.app.KobotSleep
 import crackers.kobots.parts.app.KobotsEvent
 import crackers.kobots.parts.app.publishToTopic
-import org.json.JSONObject
-import java.awt.Color
-import java.awt.FontMetrics
+import org.slf4j.LoggerFactory
 import java.time.Duration
-import java.time.Instant
-import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.imageio.ImageIO
-import kotlin.math.ln
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 /**
- * Common application control and configuration. This is _highly_ opinionated and is not intended to be a general
- * purpose library.
+ * Common application control and configuration -- e.g. how many times have you written this code?
+ *
+ * This is _highly_ opinionated and is not necessarily intended to be a general purpose library for anyone but muself.
  */
 object AppCommon {
-    // threads and execution control
+    private val logger = LoggerFactory.getLogger("AppCommon")
+
+    /**
+     * A generally sharable executor for running things. Most apps will rely on either callbacks or futures, so this
+     * just provides a simple way to manage the application's threads.
+     */
     val executor by lazy { Executors.newScheduledThreadPool(4) }
+
+    /**
+     * A flag to indicate if the application is running. This is used to control execution loops, when necessary
+     * (usually in the main application, polling for inputs).
+     *
+     * It's recommeneded that [applicationRunning] is used instead of this directly.
+     */
     val runFlag = AtomicBoolean(true)
 
     /**
-     * Run a [block] and ensure it takes up **at least** [maxPause] time. This is basically to keep various parts from
-     * overloading the various buses.
+     * A useful latch for waiting for the application to stop. Used with the [applicationRunning] property.
+     */
+    fun awaitTermination() = applicationLatch.await()
+    private val applicationLatch = CountDownLatch(1)
+
+    /**
+     * Convenience property for managing the application state. This should really only be controlled in the main
+     * applicaiton, but generally readable everywhere else. Once set to `false`, it cannot be re-set back to `true`.
+     *
+     * If set to `false`, the [awaitTermination] latch will trip.
+     *
+     * **Note:** this does _not_ terminate the executor.
+     */
+    var applicationRunning: Boolean
+        get() = runFlag.get()
+        set(value) {
+            if (!runFlag.get()) {
+                logger.error("Application is already stopped")
+                return
+            }
+            if (!value) applicationLatch.countDown()
+
+            runFlag.set(value)
+        }
+
+    /**
+     * Run a [block] and ensure it takes up **at least** [maxPause] time. This is basically to keep polling or control
+     * loops from running amok, if not using scheduling. The pause is executed even if an error occurs in the block.
+     *
+     * **Note:** the [applicationRunning] flag is checked before the pause is executed, so if the application is stopped
+     * while the block is executing, the pause will not be executed.
      *
      * The purported granularity of the pause is _ostensibly_ nanoseconds.
      */
@@ -54,22 +89,25 @@ object AppCommon {
         val pauseForNanos = maxPause.toNanos()
         val startAt = System.nanoTime()
 
-        val response = block()
-
-        val runtime = System.nanoTime() - startAt
-        if (runtime < pauseForNanos) KobotSleep.nanos(pauseForNanos - runtime)
-        return response
+        return try {
+            block()
+        } finally {
+            if (applicationRunning) {
+                val runtime = System.nanoTime() - startAt
+                if (runtime < pauseForNanos) KobotSleep.nanos(pauseForNanos - runtime)
+            }
+        }
     }
 
     /**
      * Run an execution loop until the run-flag says stop
      */
     fun checkRun(maxPause: Duration, block: () -> Unit): Future<*> = executor.submit {
-        while (runFlag.get()) executeWithMinTime(maxPause) { block() }
+        while (applicationRunning) executeWithMinTime(maxPause) { block() }
     }
 
     /**
-     * HomeAssistant client
+     * HomeAssistant client using the configuration in `application.conf`.
      */
     val hasskClient by lazy {
         with(ConfigFactory.load()) {
@@ -78,7 +116,7 @@ object AppCommon {
     }
 
     /**
-     * Generic topic and event for sleep/wake events.
+     * Generic topic and event for sleep/wake events on the internal event bus.
      */
     const val SLEEP_TOPIC = "System.Sleep"
 
@@ -86,122 +124,4 @@ object AppCommon {
 
     fun goToSleep() = publishToTopic(SLEEP_TOPIC, SleepEvent(true))
     fun wakey() = publishToTopic(SLEEP_TOPIC, SleepEvent(false))
-
-    /**
-     * Extension function on a JSON object to get a on/off status as a boolean.
-     */
-    fun JSONObject.onOff(key: String): Boolean = this.optString(key, "off") == "on"
-
-    /**
-     * Elapsed time.
-     */
-    fun Instant.elapsed(): Duration = Duration.between(this, Instant.now())
-
-    /**
-     * Captures data in a simple FIFO buffer for averaging. Probably not suitable for large sizes.
-     */
-    class SimpleAverageMeasurement(val bucketSize: Int, val initialValue: Float = Float.MAX_VALUE) {
-        private val dumbBuffer = CopyOnWriteArrayList<Float>()
-
-        val value: Float
-            get() = if (dumbBuffer.isEmpty()) initialValue else dumbBuffer.average().toFloat()
-
-        operator fun plusAssign(v: Float) {
-            dumbBuffer += v
-            while (dumbBuffer.size > bucketSize) dumbBuffer.removeAt(0)
-        }
-    }
-
-    fun microDuration(micros: Long): Duration = Duration.ofNanos(micros * 1000)
-
-    /**
-     * Note this only extracts the HSB _hue_ component of the color.
-     */
-    fun colorInterval(from: Color, to: Color, steps: Int): List<Color> =
-        colorIntervalFromHSB(
-            Color.RGBtoHSB(from.red, from.green, from.blue, null)[0] * 360f,
-            Color.RGBtoHSB(to.red, to.green, to.blue, null)[0] * 360f,
-            steps
-        )
-
-    /**
-     * Generate a range of [n] colors based on the HSB hue (0==red) [angleFrom] to [angleTo]
-     */
-    fun colorIntervalFromHSB(angleFrom: Float, angleTo: Float, n: Int): List<Color> {
-        val angleRange = angleTo - angleFrom
-        val stepAngle = angleRange / n
-        val colors = mutableListOf<Color>()
-        for (i in 0 until n) {
-            val angle = angleFrom + i * stepAngle
-            colors += Color.getHSBColor(angle / 360f, 1f, 1f)
-        }
-        return colors
-    }
-
-    fun Color.scale(percent: Int) = percent.let { pct ->
-        if (pct !in (1..100)) throw IllegalArgumentException("Percentage is out of range")
-        val p = pct / 100f
-        Color(
-            (red * p).roundToInt(),
-            (green * p).roundToInt(),
-            (blue * p).roundToInt()
-        )
-    }
-
-    fun Int.kelvinToRGB(): Color {
-        val tempK = (Integer.min(40000, Integer.max(1000, this)) / 100.0).roundToInt()
-
-        fun Double.limit(): Int = (
-            if (this < 0) {
-                0.0
-            } else if (this > 255) {
-                255.0
-            } else {
-                this
-            }
-            ).roundToInt()
-
-        val r: Int = if (tempK <= 66) {
-            255
-        } else {
-            var temp = tempK - 60.0
-            temp = 329.698727446 * temp.pow(-0.1332047592)
-            temp.limit()
-        }
-
-        val g: Int = if (tempK <= 66) {
-            val temp = 99.4708025861 * ln(tempK.toDouble()) - 161.1195681661
-            temp.limit()
-        } else {
-            var temp = tempK - 60.0
-            temp = 288.1221695283 * temp.pow(-0.0755148492)
-            temp.limit()
-        }
-
-        val b: Int = if (tempK >= 66) {
-            255
-        } else if (tempK <= 19) {
-            0
-        } else {
-            var temp = tempK - 10.0
-            temp = 138.5177312231 * ln(temp) - 305.0447927307
-            temp.limit()
-        }
-
-        return Color(r, g, b)
-    }
-
-    val PURPLE = Color(0xB4, 0, 0xFF)
-    val GOLDENROD = Color(255, 150, 0)
-    val ORANGISH = Color(1f, .55f, 0f)
-
-    /**
-     * Use font metrics to center some text in an area
-     */
-    fun FontMetrics.center(text: String, width: Int) = kotlin.math.max((width - stringWidth(text)) / 2, 0)
-
-    /**
-     * Load an image.
-     */
-    fun loadImage(name: String) = ImageIO.read(object {}::class.java.getResourceAsStream(name))
 }

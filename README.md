@@ -19,4 +19,9 @@ There are two main sections.
 
 - [`NeoKeyHandler`](src/main/kotlin/crackers/kobots/parts/app/io/NeoKeyHandler.kt) is a "wrapper" around handling a rotating "menu" of actions
   - use with the `NeoKeyMenu` class to get complete key-press handling and automatic invocation of actions
-- [`StatusColumnDisplay`](src/main/kotlin/crackers/kobots/app/io/StatusColumnDisplay.kt) displays numbers in named columns (e.g. for OLED and TFT displays)
+- [`StatusColumnDisplay`](src/main/kotlin/crackers/kobots/parts/app/io/StatusColumnDisplay.kt) displays numbers in named columns (e.g. for OLED and TFT displays)
+    - produces a small image of the columns
+- [SmallMenuDisplay](src/main/kotlin/crackers/kobots/parts/app/io/SmallMenuDisplay.kt) that works with the `NeoKeyMenu` stuff
+- [AppCommon](src/main/kotlin/crackers/kobots/parts/app/AppCommon.kt) after I did the same :poop: 3 times
+- [KobotsMQTT](src/main/kotlin/crackers/kobots/parts/mqtt/KobotsMQTT.kt) for a common **Qos 0** messaging
+    - don't want stuff happening 3 hours later on a late message delivery 

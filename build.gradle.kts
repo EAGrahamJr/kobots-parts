@@ -21,7 +21,7 @@ val DIOZERO_VER = "1.4.0"
 val DEVICES_VER = "0.2.0"
 
 group = "crackers.kobots"
-version = "0.0.2"
+version = "0.0.3"
 
 dependencies {
     // these are likely to be the ones in use

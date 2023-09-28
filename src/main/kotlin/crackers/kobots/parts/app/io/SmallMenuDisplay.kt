@@ -16,17 +16,26 @@
 
 package crackers.kobots.parts.app.io
 
-import crackers.kobots.app.AppCommon.center
+import crackers.kobots.parts.app.io.SmallMenuDisplay.DisplayMode
+import crackers.kobots.parts.center
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 
 /**
- * Creates screen graphics for the NeoKeyMenu display. This is primarily intended for use with a small OLED display
- * (e.g. 128x32). This class only creates the graphics portion of an image. Actual display is handled elsewhere.
+ * An abstract class that creates screen graphics for the NeoKeyMenu display. This is primarily intended for use with a
+ * small OLED display (e.g. 128x32). This class only creates image: the [displayFun] receiver function is responsible for
+ * displaying the image.
+ *
+ * The assumption for sizing is that the number of items given to display (4) _should_ fit (128/32).
  *
  * Note: text is **NOT** truncated, so if the text is "too long", it may overwrite other text.
+ *
+ * @param mode the display mode (defaults to [DisplayMode.TEXT])
+ *
+ *
+ * TODO "vertical" menu display
  */
 abstract class SmallMenuDisplay(private val mode: DisplayMode = DisplayMode.TEXT) : NeoKeyMenu.MenuDisplay {
 
@@ -112,13 +121,10 @@ abstract class SmallMenuDisplay(private val mode: DisplayMode = DisplayMode.TEXT
             DisplayMode.ICONS -> showIcons(items)
             DisplayMode.TEXT -> showText(items)
         }
-        drawMenuImage(menuImage)
+        displayFun(menuImage)
     }
 
-    /**
-     * Dispose of the image.
-     */
-    protected abstract fun drawMenuImage(menuImage: BufferedImage)
+    protected abstract fun displayFun(menuImage: BufferedImage)
 
     companion object {
         const val IMG_WIDTH = 128
