@@ -20,7 +20,7 @@ import crackers.kobots.parts.loadImage
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.Image
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.min
 
 /**
  * An "actionable" menu using the NeoKey. Due to the limited number of buttons, the menu is "rotated" between the
@@ -36,9 +36,11 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
 
     // clone immutable list
     private val menuItems = items.toList()
+    private val maxItemsToShow = min(items.size, neoKey.numberOfButtons)
+    private var leftMostIndex = 0
 
-    // take off one for the "next" button
-    private val maxKeys = neoKey.numberOfButtons - 1
+    // copy of menu items that can be displayed/acted upon
+    private val displayMenu = mutableListOf<MenuItem>()
 
     /**
      * Displays menu items.
@@ -65,33 +67,49 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
         override fun toString() = abbrev ?: name
     }
 
-    private val currentMenuItem = AtomicInteger(0)
 
     private val nextMenuItem by lazy {
         MenuItem("Next", abbrev = "\u25B7", buttonColor = Color.BLUE, icon = loadImage("/arrow_forward.png")) {
-            rotateMenu(currentMenuItem.get() + maxKeys)
+            displayMenuFromIndex(leftMostIndex + maxItemsToShow - 1)
         }
     }
 
-    private fun rotateMenu(proposed: Int) {
-        var nextIndex = proposed
-        if (nextIndex >= menuItems.size) {
-            nextIndex = 0
-        } else if (nextIndex + maxKeys >= menuItems.size) nextIndex = menuItems.size - maxKeys
-        currentMenuItem.set(nextIndex)
+    @Synchronized
+    private fun displayMenuFromIndex(proposed: Int) {
+        val tentative = mutableListOf<MenuItem>()
+
+        // if the menu only contains num buttons items, use the whole thing
+        if (menuItems.size <= maxItemsToShow) {
+            tentative.addAll(menuItems)
+            // if it's short, fill with NO_KEY
+            while (tentative.size < maxItemsToShow) tentative.add(NO_KEY)
+        } else {
+            // otherwise, use the subset of items (take off 1 for "next")
+            leftMostIndex = if (proposed >= menuItems.size) 0 else proposed
+            val offset = maxItemsToShow - 1
+            val maxIndex = min(leftMostIndex + offset, menuItems.size)
+            tentative.addAll(menuItems.subList(leftMostIndex, maxIndex))
+            // the last item is always "next", so fill in any "blanks: with NO_KEY
+            while (tentative.size < offset) tentative.add(NO_KEY)
+            tentative += nextMenuItem
+        }
+        displayMenu.clear()
+        displayMenu.addAll(tentative)
         displayMenu()
     }
 
-    private val NO_KEY = MenuItem("Ignored") {}
+    private val NO_KEY = MenuItem("Ignored", "", buttonColor = Color.BLACK) {}
 
     /**
      * Reads the keyboard and maps buttons pressed to actions to be performed.
      */
     @Synchronized
     open fun execute(): List<Pair<Int, MenuItem>> {
+        if (displayMenu.isEmpty()) return emptyList()
+
         return neoKey.read()
             .mapIndexed { index, pressed ->
-                index to if (pressed) menuItems[currentMenuItem.get() + index] else NO_KEY
+                index to if (pressed) displayMenu[index] else NO_KEY
             }
             .filter { it.second != NO_KEY }
     }
@@ -107,16 +125,10 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
      */
     @Synchronized
     fun displayMenu() {
-        val fromIndex = currentMenuItem.get()
-        // if there's exactly 4, just return them, else get a sub-list and add "next"
-        val toDisplay = if (menuItems.size == 4) {
-            menuItems
-        } else {
-            menuItems.subList(fromIndex, fromIndex + maxKeys).toMutableList().also { it.add(nextMenuItem) }
-        }
+        if (displayMenu.isEmpty()) displayMenuFromIndex(0)
 
         // display the stuff and set the button colors
-        display.displayItems(toDisplay)
-        neoKey.buttonColors = toDisplay.map { it.buttonColor }
+        display.displayItems(displayMenu)
+        neoKey.buttonColors = displayMenu.map { it.buttonColor }
     }
 }
