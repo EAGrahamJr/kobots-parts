@@ -6,10 +6,13 @@ import java.awt.FontMetrics
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.time.toJavaDuration
 
 /*
  * Just stuff.
@@ -143,3 +146,35 @@ fun FontMetrics.center(text: String, width: Int) = kotlin.math.max((width - stri
  * Load an image.
  */
 fun loadImage(name: String) = ImageIO.read(object {}::class.java.getResourceAsStream(name))
+
+/**
+ * Run a thing at a fixed rate extension function for better readability. Granularity is milliseconds.
+ */
+fun ScheduledExecutorService.scheduleAtFixedRate(intialDelay: Duration, period: Duration, command: Runnable) =
+    scheduleAtFixedRate(command, intialDelay.toMillis(), period.toMillis(), TimeUnit.MILLISECONDS)
+
+/**
+ * Run a thing at a fixed delay extension function for better readability. Granularity is milliseconds.
+ */
+fun ScheduledExecutorService.scheduleWithFixedDelay(intialDelay: Duration, delay: Duration, command: Runnable) =
+    scheduleWithFixedDelay(command, intialDelay.toMillis(), delay.toMillis(), TimeUnit.MILLISECONDS)
+
+/**
+ * Run a thing at a fixed rate extension function for better readability. Granularity is milliseconds.
+ */
+fun ScheduledExecutorService.scheduleAtFixedRate(
+    intialDelay: kotlin.time.Duration,
+    period: kotlin.time.Duration,
+    command: Runnable
+) =
+    scheduleAtFixedRate(intialDelay.toJavaDuration(), period.toJavaDuration(), command)
+
+/**
+ * Run a thing at a fixed delay extension function for better readability. Granularity is milliseconds.
+ */
+fun ScheduledExecutorService.scheduleWithFixedDelay(
+    intialDelay: kotlin.time.Duration,
+    delay: kotlin.time.Duration,
+    command: Runnable
+) =
+    scheduleWithFixedDelay(intialDelay.toJavaDuration(), delay.toJavaDuration(), command)

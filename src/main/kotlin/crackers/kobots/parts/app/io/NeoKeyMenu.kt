@@ -67,9 +67,8 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
         override fun toString() = abbrev ?: name
     }
 
-
     private val nextMenuItem by lazy {
-        MenuItem("Next", abbrev = "\u25B7", buttonColor = Color.BLUE, icon = loadImage("/arrow_forward.png")) {
+        MenuItem("Next", buttonColor = Color.MAGENTA.darker(), icon = loadImage("/arrow_forward.png")) {
             displayMenuFromIndex(leftMostIndex + maxItemsToShow - 1)
         }
     }
@@ -97,8 +96,6 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
         displayMenu.addAll(tentative)
         displayMenu()
     }
-
-    private val NO_KEY = MenuItem("Ignored", "", buttonColor = Color.BLACK) {}
 
     /**
      * Reads the keyboard and maps buttons pressed to actions to be performed.
@@ -130,5 +127,9 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
         // display the stuff and set the button colors
         display.displayItems(displayMenu)
         neoKey.buttonColors = displayMenu.map { it.buttonColor }
+    }
+
+    companion object {
+        val NO_KEY = MenuItem("Ignored", "", buttonColor = Color.BLACK) {}
     }
 }

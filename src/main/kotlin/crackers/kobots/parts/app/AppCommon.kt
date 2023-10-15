@@ -18,10 +18,12 @@ package crackers.kobots.app
 
 import com.typesafe.config.ConfigFactory
 import crackers.hassk.HAssKClient
+import crackers.kobots.mqtt.KobotsMQTT
 import crackers.kobots.parts.app.KobotSleep
 import crackers.kobots.parts.app.KobotsEvent
 import crackers.kobots.parts.app.publishToTopic
 import org.slf4j.LoggerFactory
+import java.net.InetAddress
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -62,7 +64,7 @@ object AppCommon {
      *
      * If set to `false`, the [awaitTermination] latch will trip.
      *
-     * **Note:** this does _not_ terminate the executor.
+     * **Note:** this does _not_ terminate **any** threads or co-routines: it is only a "system indicator".
      */
     var applicationRunning: Boolean
         get() = runFlag.get()
@@ -85,6 +87,7 @@ object AppCommon {
      *
      * The purported granularity of the pause is _ostensibly_ nanoseconds.
      */
+    @Deprecated("Use Java executors instead")
     fun <R> executeWithMinTime(maxPause: Duration, block: () -> R): R {
         val pauseForNanos = maxPause.toNanos()
         val startAt = System.nanoTime()
@@ -102,17 +105,34 @@ object AppCommon {
     /**
      * Run an execution loop until the run-flag says stop
      */
+    @Deprecated("Use Java executors instead")
     fun checkRun(maxPause: Duration, block: () -> Unit): Future<*> = executor.submit {
         while (applicationRunning) executeWithMinTime(maxPause) { block() }
     }
 
     /**
+     * Convenience property for the application configuration.
+     */
+    val applicationConfig by lazy { ConfigFactory.load() }
+
+    /**
      * HomeAssistant client using the configuration in `application.conf`.
      */
     val hasskClient by lazy {
-        with(ConfigFactory.load()) {
-            HAssKClient(getString("ha.token"), getString("ha.server"), getInt("ha.port"))
-        }
+        val port = if (applicationConfig.hasPath("ha.port")) applicationConfig.getInt("ha.port") else 8123
+
+        HAssKClient(
+            applicationConfig.getString("ha.token"),
+            applicationConfig.getString("ha.server"),
+            port
+        )
+    }
+
+    /**
+     * MQTT client using the configuration in `application.conf`.
+     */
+    val mqttClient by lazy {
+        KobotsMQTT(InetAddress.getLocalHost().hostName, applicationConfig.getString("mqtt.broker"))
     }
 
     /**

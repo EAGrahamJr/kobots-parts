@@ -16,7 +16,8 @@
 
 package crackers.kobots.parts.movement
 
-import crackers.kobots.app.AppCommon.executeWithMinTime
+import crackers.kobots.app.AppCommon
+import crackers.kobots.parts.app.KobotSleep
 import java.time.Duration
 
 /**
@@ -67,9 +68,23 @@ class Action(movements: Map<Actuator<Movement>, Movement>) {
 
         return movementResults
             .mapIndexed { index, previous ->
-                executeWithMinTime(nanoSleeps) { previous || executeMovement(index) }
+                executeAndPause(nanoSleeps) { previous || executeMovement(index) }
             }
             .all { it }
+    }
+
+    private fun <R> executeAndPause(maxPause: Duration, block: () -> R): R {
+        val pauseForNanos = maxPause.toNanos()
+        val startAt = System.nanoTime()
+
+        return try {
+            block()
+        } finally {
+            if (AppCommon.applicationRunning) {
+                val runtime = System.nanoTime() - startAt
+                if (runtime < pauseForNanos) KobotSleep.nanos(pauseForNanos - runtime)
+            }
+        }
     }
 
     private fun executeMovement(index: Int): Boolean {

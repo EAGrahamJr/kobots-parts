@@ -76,7 +76,8 @@ private class KobotsSubscriberDecorator<T : KobotsMessage>(val listener: KobotsS
  */
 @Suppress("UNCHECKED_CAST")
 fun <T : KobotsMessage> joinTopic(topic: String, listener: KobotsSubscriber<T>, batchSize: Long = 1) {
-    val publisher = eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<T>() } as SubmissionPublisher<T>
+    val publisher =
+        eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<KobotsMessage>() } as SubmissionPublisher<T>
     publisher.subscribe(KobotsSubscriberDecorator(listener, batchSize))
 }
 
@@ -85,7 +86,8 @@ fun <T : KobotsMessage> joinTopic(topic: String, listener: KobotsSubscriber<T>, 
  */
 @Suppress("UNCHECKED_CAST")
 fun <T : KobotsMessage> leaveTopic(topic: String, listener: KobotsSubscriber<T>) {
-    val publisher = eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<T>() } as SubmissionPublisher<T>
+    val publisher =
+        eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<KobotsMessage>() } as SubmissionPublisher<T>
     publisher.subscribers.removeIf { (it as KobotsSubscriberDecorator<T>).listener == listener }
 }
 
@@ -103,7 +105,8 @@ fun <T : KobotsMessage> publishToTopic(topic: String, vararg items: T) {
  */
 @Suppress("UNCHECKED_CAST")
 fun <T : KobotsMessage> publishToTopic(topic: String, items: Collection<T>) {
-    val publisher = eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<T>() } as SubmissionPublisher<T>
+    val publisher =
+        eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<KobotsMessage>() } as SubmissionPublisher<T>
     items.forEach { item -> publisher.submit(item) }
 }
 
