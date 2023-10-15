@@ -82,8 +82,11 @@ class NeoKeyHandler(
      * Update the colors of the buttons when not pressed, only if necessary.
      */
     private fun updateButtonColors(force: Boolean = false) {
-        val newColors = buttonColors.map { WS2811.PixelColor(it) }
-        if (newColors != keyboard.colors() || force) keyboard[0, 3] = newColors
+        val newColors: List<WS2811.PixelColor> = buttonColors.map { WS2811.PixelColor(it) }
+        val colors: List<WS2811.PixelColor> = keyboard.colors()
+        if (newColors != colors || force) {
+            keyboard[0, 3] = newColors
+        }
     }
 
     private val logger by lazy { LoggerFactory.getLogger("NeoKeyHandler") }
