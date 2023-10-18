@@ -20,6 +20,7 @@ import org.eclipse.paho.mqttv5.common.MqttException
 import org.eclipse.paho.mqttv5.common.MqttMessage
 import org.eclipse.paho.mqttv5.common.MqttSubscription
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties
+import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.ZonedDateTime
@@ -164,8 +165,9 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     }
 
     /**
-     * Subscribe to a topic. The [listener] is called when a message is received. Note that adding a subscriber
-     * multiple times may cause issues with the underlying MQTT client.
+     * Subscribe to a topic. The [listener] is called when a message is received.
+     *
+     * Note that adding a subscriber multiple times may cause issues with the underlying MQTT client.
      */
     fun subscribe(topic: String, listener: (String) -> Unit) {
         // only subscribe a listener once
@@ -174,6 +176,14 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
         }
         addListener(topic, listener)
     }
+
+    /**
+     * Subscribe to a topic. The [handler] is called when a message is received and converted to a JSONOjbect.
+     *
+     * Note that adding a subscriber multiple times may cause issues with the underlying MQTT client.
+     */
+    fun subscribe(topic: String, handler: (JSONObject) -> Unit) =
+        subscribe(topic) { resp: String -> handler(JSONObject(resp)) }
 
     /**
      * Add a listener to a topic.
@@ -196,9 +206,18 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     }
 
     /**
-     * Publish a message to the topic. All errors are only logged, keeping in line with a QoS of 0.
+     * Publish a JSON message to the topic. All errors are only logged, keeping in line with a QoS of 0.
+     */
+    fun publish(topic: String, payload: JSONObject) = publish(topic, payload.toString())
+
+    /**
+     * Publish a String message to the topic. All errors are only logged, keeping in line with a QoS of 0.
      */
     fun publish(topic: String, payload: String) = publish(topic, payload.toByteArray())
+
+    /**
+     * Publish a message to the topic. All errors are only logged, keeping in line with a QoS of 0.
+     */
     fun publish(topic: String, payload: ByteArray) {
         try {
             mqttClient.publish(topic, MqttMessage(payload)).waitForCompletion()
@@ -208,7 +227,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     }
 
     /**
-     * Quasi-extention operator that allows publishing by using map notation:
+     * Quasi-extension operator that allows publishing by using map notation:
      *
      * ```
      * mqtt["topic"] = "payload"
