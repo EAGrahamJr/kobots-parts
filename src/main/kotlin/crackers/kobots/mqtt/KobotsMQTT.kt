@@ -178,11 +178,11 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     }
 
     /**
-     * Subscribe to a topic. The [handler] is called when a message is received and converted to a JSONOjbect.
+     * Subscribe to a topic. The [handler] is called when a message is received and converted to a JSONObject.
      *
      * Note that adding a subscriber multiple times may cause issues with the underlying MQTT client.
      */
-    fun subscribe(topic: String, handler: (JSONObject) -> Unit) =
+    fun subscribeJSON(topic: String, handler: (JSONObject) -> Unit) =
         subscribe(topic) { resp: String -> handler(JSONObject(resp)) }
 
     /**
