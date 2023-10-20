@@ -35,8 +35,19 @@ interface StatusColumnDisplay {
  * Default implementation of [StatusColumnDisplay].
  */
 class StatusColumnDelegate(private val widthOfDisplay: Int, private val heightOfDisplay: Int) : StatusColumnDisplay {
+    private var bgColor = Color.BLACK
+    private var fgColor = Color.WHITE
+
+    fun setForeground(color: Color) {
+        fgColor = color
+    }
+
+    fun setBackground(color: Color) {
+        bgColor = color
+    }
+
     override fun Graphics2D.clearImage() {
-        color = Color.BLACK
+        color = bgColor
         fillRect(0, 0, widthOfDisplay, heightOfDisplay)
     }
 
@@ -53,15 +64,15 @@ class StatusColumnDelegate(private val widthOfDisplay: Int, private val heightOf
             val drawWidth = columnWidth - 1
 
             // position headers
-            color = Color.GRAY
+            color = fgColor.darker()
             fillRect(colPosition, 0, drawWidth, halfHeightOfDisplay)
-            color = Color.BLACK
+            color = bgColor
             font = headerFont
             val headerX = colPosition + fontMetrics.center(header, drawWidth)
             drawString(header, headerX, fontMetrics.ascent)
 
             // position values
-            color = Color.WHITE
+            color = fgColor
             font = ogFont
             val value = status[header].toString()
             val valueX = colPosition + fontMetrics.center(value, drawWidth)

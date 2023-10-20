@@ -36,8 +36,13 @@ import java.awt.image.BufferedImage
  *
  *
  * TODO "vertical" menu display
+ * TODO make it fit other things (multi-line?)
  */
-abstract class SmallMenuDisplay(private val mode: DisplayMode = DisplayMode.TEXT) : NeoKeyMenu.MenuDisplay {
+abstract class SmallMenuDisplay(
+    private val mode: DisplayMode = DisplayMode.TEXT,
+    private val displayWidth: Int = DEFAULT_WIDTH,
+    private val displayHeight: Int = DEFAULT_HEIGHT
+) : NeoKeyMenu.MenuDisplay {
 
     enum class DisplayMode {
         ICONS, TEXT
@@ -45,8 +50,8 @@ abstract class SmallMenuDisplay(private val mode: DisplayMode = DisplayMode.TEXT
 
     private val menuGraphics: Graphics2D
 
-    private val withImagestextHeight: Int
-    private val withImagestextBaseline: Int
+    private val withImagesTextHeight: Int
+    private val withImagesTextBaseline: Int
     private val iconImageSize: Int
     private val withImagesFont: Font = Font(Font.SANS_SERIF, Font.PLAIN, 9)
 
@@ -54,63 +59,76 @@ abstract class SmallMenuDisplay(private val mode: DisplayMode = DisplayMode.TEXT
     private var withTextFirstLine: Int
     private val withTextSecondLine: Int
 
+    private var fgColor = Color.WHITE
+    private var bgColor = Color.BLACK
+
+    fun setForeground(color: Color) {
+        fgColor = color
+    }
+
+    fun setBackground(color: Color) {
+        bgColor = color
+    }
+
     /**
      * Draw to a separate image. This allows the image to be scaled to the actual display size, or placed within another
      * image.
      */
-    protected val menuImage = BufferedImage(IMG_WIDTH, IMG_HEIGHT, BufferedImage.TYPE_BYTE_GRAY).also { img ->
+    private val menuImage = BufferedImage(displayWidth, displayHeight, BufferedImage.TYPE_BYTE_GRAY).also { img ->
         menuGraphics = (img.graphics as Graphics2D).apply {
             val fm = getFontMetrics(withImagesFont)
-            withImagestextHeight = fm.height
-            withImagestextBaseline = IMG_HEIGHT - fm.descent
-            iconImageSize = IMG_HEIGHT - withImagestextHeight
+            withImagesTextHeight = fm.height
+            withImagesTextBaseline = displayHeight - fm.descent
+            iconImageSize = displayHeight - withImagesTextHeight
 
             withTextFirstLine = getFontMetrics(withTextFont).ascent + 1
-            withTextSecondLine = IMG_HEIGHT - getFontMetrics(withTextFont).descent
+            withTextSecondLine = displayHeight - getFontMetrics(withTextFont).descent
         }
     }
 
     /**
      * Draw icons + text for each menu item.
      */
-    protected fun showIcons(items: List<NeoKeyMenu.MenuItem>) {
-        with(menuGraphics) {
-            font = withImagesFont
-            // clear the image
-            color = Color.BLACK
-            fillRect(0, 0, IMG_WIDTH, IMG_HEIGHT)
-            // draw and scale the icons
-            color = Color.WHITE
-            items.forEachIndexed { index, item ->
-                val offset = index * IMG_HEIGHT
-                val imageX = offset + withImagestextHeight / 2
-                if (item.icon != null) {
-                    drawImage(item.icon, imageX, 0, iconImageSize, iconImageSize, null)
-                }
-                val text = item.toString()
-                val textX = offset + fontMetrics.center(text, IMG_HEIGHT)
-                drawString(text, textX, withImagestextBaseline)
+    private fun showIcons(items: List<NeoKeyMenu.MenuItem>) = with(menuGraphics) {
+        font = withImagesFont
+        clearImage()
+
+        // draw and scale the icons
+        color = fgColor
+        items.forEachIndexed { index, item ->
+            val offset = index * displayHeight
+            val imageX = offset + withImagesTextHeight / 2
+            if (item.icon != null) {
+                drawImage(item.icon, imageX, 0, iconImageSize, iconImageSize, null)
             }
+            val text = item.toString()
+            val textX = offset + fontMetrics.center(text, displayHeight)
+            drawString(text, textX, withImagesTextBaseline)
         }
     }
 
     /**
      * Draw text for each menu item -- this is done in two columns with two rows.
      */
-    protected fun showText(items: List<NeoKeyMenu.MenuItem>) {
-        val secondColumnOffset = (MAX_WD / 2) - 3
-        with(menuGraphics) {
-            font = withTextFont
-            // clear the image
-            color = Color.BLACK
-            fillRect(0, 0, IMG_WIDTH, IMG_HEIGHT)
-            // draw the text
-            color = Color.WHITE
-            drawString(items[0].toString(), 0, withTextFirstLine)
-            drawString(items[1].toString(), secondColumnOffset, withTextFirstLine)
-            drawString(items[2].toString(), 0, withTextSecondLine)
-            drawString(items[3].toString(), secondColumnOffset, withTextSecondLine)
-        }
+    private fun showText(items: List<NeoKeyMenu.MenuItem>) = with(menuGraphics) {
+        val wd = displayWidth - 1
+        val secondColumnOffset = (wd / 2) - 3
+
+        font = withTextFont
+        clearImage()
+
+        // draw the text
+        color = Color.WHITE
+        drawString(items[0].toString(), 0, withTextFirstLine)
+        drawString(items[1].toString(), secondColumnOffset, withTextFirstLine)
+        drawString(items[2].toString(), 0, withTextSecondLine)
+        drawString(items[3].toString(), secondColumnOffset, withTextSecondLine)
+    }
+
+    private fun Graphics2D.clearImage() {
+        // clear the image
+        color = bgColor
+        fillRect(0, 0, displayWidth, displayHeight)
     }
 
     /**
@@ -127,9 +145,7 @@ abstract class SmallMenuDisplay(private val mode: DisplayMode = DisplayMode.TEXT
     protected abstract fun displayFun(menuImage: BufferedImage)
 
     companion object {
-        const val IMG_WIDTH = 128
-        const val IMG_HEIGHT = 32
-        private const val HALF_HT = IMG_HEIGHT / 2
-        private const val MAX_WD = IMG_WIDTH - 1
+        const val DEFAULT_WIDTH = 128
+        const val DEFAULT_HEIGHT = 32
     }
 }
