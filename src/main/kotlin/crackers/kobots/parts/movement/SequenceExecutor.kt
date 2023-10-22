@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Request to execute a sequence of actions.
@@ -80,7 +81,7 @@ abstract class SequenceExecutor(
         get() = _stop.get()
         private set(value) = _stop.set(value)
 
-    data class SequenceCompleted(val source: String, val sequence: String) : KobotsEvent
+    data class SequenceEvent(val source: String, val sequence: String, val started: Boolean) : KobotsEvent
 
     /**
      * Sets the stop flag and blocks until the flag is cleared.
@@ -90,6 +91,7 @@ abstract class SequenceExecutor(
         while (stopImmediately) KobotSleep.millis(5)
     }
 
+    protected val currentSequence = AtomicReference<String>()
     protected abstract fun canRun(): Boolean
 
     /**
@@ -112,11 +114,19 @@ abstract class SequenceExecutor(
      */
     protected fun executeSequence(request: SequenceRequest) {
         // claim it for ourselves and then use that for loop control
+        val sequenceName = request.sequence.name
         if (!_moving.compareAndSet(false, true)) {
-            logger.warn("Sequence already running - rejected ${request.sequence.name}")
+            logger.warn("Sequence already running - rejected $sequenceName")
             return
         }
         seqExecutor.submit {
+            currentSequence.set(sequenceName)
+
+            // publish start event to the masses
+            val startMessage = SequenceEvent(executorName, sequenceName, true)
+            mqttClient.publish(MQTT_TOPIC, JSONObject(startMessage))
+            publishToTopic(INTERNAL_TOPIC, startMessage)
+
             preExecution()
             try {
                 request.sequence.build().forEach { action ->
@@ -128,9 +138,10 @@ abstract class SequenceExecutor(
                     }
                 }
             } catch (e: Exception) {
-                logger.error("Error executing sequence ${request.sequence.name}", e)
+                logger.error("Error executing sequence $sequenceName", e)
             }
             postExecution()
+            currentSequence.set(null)
 
             // done
             _moving.set(false)
@@ -138,9 +149,8 @@ abstract class SequenceExecutor(
             _stop.set(false) // clear emergency stop flag
 
             // publish completion event to the masses
-            val completedMessage = SequenceCompleted(executorName, request.sequence.name)
-            val payload = JSONObject(completedMessage).toString()
-            mqttClient.publish(MQTT_TOPIC, payload)
+            val completedMessage = SequenceEvent(executorName, sequenceName, false)
+            mqttClient.publish(MQTT_TOPIC, JSONObject(completedMessage))
             publishToTopic(INTERNAL_TOPIC, completedMessage)
         }
     }
