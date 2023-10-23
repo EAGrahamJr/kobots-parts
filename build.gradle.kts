@@ -10,6 +10,8 @@ plugins {
     id("org.jmailen.kotlinter") version "3.12.0"
     id("library-publish") version "1.0.1"
     id("org.jetbrains.dokka") version "1.8.10"
+    // ***NOTE*** semver is applied on push so it's the _next_ version
+    id("net.thauvin.erik.gradle.semver") version "1.0.4"
 }
 
 repositories {
@@ -21,7 +23,6 @@ val DIOZERO_VER = "1.4.0"
 val DEVICES_VER = "0.2+"
 
 group = "crackers.kobots"
-version = "0.0.6"
 
 dependencies {
     // these are likely to be the ones in use
