@@ -21,7 +21,22 @@ There are two main sections.
   - use with the `NeoKeyMenu` class to get complete key-press handling and automatic invocation of actions
 - [`StatusColumnDisplay`](src/main/kotlin/crackers/kobots/parts/app/io/StatusColumnDisplay.kt) displays numbers in named columns (e.g. for OLED and TFT displays)
     - produces a small image of the columns
-- [SmallMenuDisplay](src/main/kotlin/crackers/kobots/parts/app/io/SmallMenuDisplay.kt) that works with the `NeoKeyMenu` stuff
-- [AppCommon](src/main/kotlin/crackers/kobots/parts/app/AppCommon.kt) after I did the same :poop: 3 times
-- [KobotsMQTT](src/main/kotlin/crackers/kobots/parts/mqtt/KobotsMQTT.kt) for a common **Qos 0** messaging
+- [`SmallMenuDisplay`](src/main/kotlin/crackers/kobots/parts/app/io/SmallMenuDisplay.kt) that works with the `NeoKeyMenu` stuff
+- [`AppCommon`](src/main/kotlin/crackers/kobots/parts/app/AppCommon.kt) after I did the same :poop: 3 times
+  - see [Appendix A](#appendix-a-configuration-reference) for configuration reference
+- [`KobotsMQTT`](src/main/kotlin/crackers/kobots/parts/mqtt/KobotsMQTT.kt) for a common **Qos 0** messaging
     - don't want stuff happening 3 hours later on a late message delivery 
+
+## Appendix A: Configuration reference
+
+```hocon
+{
+  ha: {
+    token: "HomeAssitant Credentials Token"
+    server: "127.0.0.1"
+    port: 8123
+  }
+  mqtt.broker = "tcp://127.0.0.1:1883"
+}
+
+```

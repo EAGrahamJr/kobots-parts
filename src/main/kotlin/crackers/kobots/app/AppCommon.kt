@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Common application control and configuration -- e.g. how many times have you written this code?
  *
- * This is _highly_ opinionated and is not necessarily intended to be a general purpose library for anyone but muself.
+ * This is _highly_ opinionated and is not necessarily intended to be a general purpose library for anyone but myself.
  */
 object AppCommon {
     private val logger = LoggerFactory.getLogger("AppCommon")
@@ -48,7 +48,7 @@ object AppCommon {
      * A flag to indicate if the application is running. This is used to control execution loops, when necessary
      * (usually in the main application, polling for inputs).
      *
-     * It's recommeneded that [applicationRunning] is used instead of this directly.
+     * It's recommended that [applicationRunning] is used instead of this directly.
      */
     val runFlag = AtomicBoolean(true)
 
@@ -60,7 +60,7 @@ object AppCommon {
 
     /**
      * Convenience property for managing the application state. This should really only be controlled in the main
-     * applicaiton, but generally readable everywhere else. Once set to `false`, it cannot be re-set back to `true`.
+     * application, but generally readable everywhere else. Once set to `false`, it cannot be re-set back to `true`.
      *
      * If set to `false`, the [awaitTermination] latch will trip.
      *
@@ -105,7 +105,10 @@ object AppCommon {
     /**
      * Run an execution loop until the run-flag says stop
      */
-    @Deprecated("Use Java executors instead")
+    @Deprecated(
+        "Use Java executors instead",
+        ReplaceWith("AppCommon.executor.scheduleWithFixedDelay(maxPause, maxPause, block)")
+    )
     fun checkRun(maxPause: Duration, block: () -> Unit): Future<*> = executor.submit {
         while (applicationRunning) executeWithMinTime(maxPause) { block() }
     }
