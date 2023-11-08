@@ -17,8 +17,10 @@
 package crackers.kobots.parts.movement
 
 import crackers.kobots.mqtt.KobotsMQTT
+import crackers.kobots.mqtt.KobotsMQTT.Companion.KOBOTS_EVENTS
 import crackers.kobots.parts.app.*
 import org.json.JSONObject
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -51,7 +53,7 @@ abstract class SequenceExecutor(
     private val mqttClient: KobotsMQTT,
     private val executionSpeeds: Map<ActionSpeed, Long> = emptyMap()
 ) {
-    protected val logger = LoggerFactory.getLogger(executorName)
+    protected val logger: Logger = LoggerFactory.getLogger(executorName)
 
     private fun ActionSpeed.toMillis(): Long {
         return executionSpeeds[this] ?: when (this) {
@@ -124,7 +126,7 @@ abstract class SequenceExecutor(
 
             // publish start event to the masses
             val startMessage = SequenceEvent(executorName, sequenceName, true)
-            mqttClient.publish(MQTT_TOPIC, JSONObject(startMessage))
+            mqttClient.publish(KOBOTS_EVENTS, JSONObject(startMessage))
             publishToTopic(INTERNAL_TOPIC, startMessage)
 
             preExecution()
@@ -150,7 +152,7 @@ abstract class SequenceExecutor(
 
             // publish completion event to the masses
             val completedMessage = SequenceEvent(executorName, sequenceName, false)
-            mqttClient.publish(MQTT_TOPIC, JSONObject(completedMessage))
+            mqttClient.publish(KOBOTS_EVENTS, JSONObject(completedMessage))
             publishToTopic(INTERNAL_TOPIC, completedMessage)
         }
     }
@@ -172,6 +174,8 @@ abstract class SequenceExecutor(
 
     companion object {
         const val INTERNAL_TOPIC = "Executor.Sequences"
-        const val MQTT_TOPIC = "kobots/events"
+
+        @Deprecated("Use KOBOTS_EVENTS instead", ReplaceWith("KOBOTS_EVENTS"))
+        const val MQTT_TOPIC = KOBOTS_EVENTS
     }
 }

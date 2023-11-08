@@ -15,6 +15,7 @@
  */
 package crackers.kobots.mqtt
 
+import crackers.kobots.parts.app.STOP_NOW
 import org.eclipse.paho.mqttv5.client.*
 import org.eclipse.paho.mqttv5.common.MqttException
 import org.eclipse.paho.mqttv5.common.MqttMessage
@@ -28,6 +29,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.system.exitProcess
 
 /**
  * MQTT wrapper for Kobots.
@@ -236,6 +238,20 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     operator fun set(topic: String, payload: String) = publish(topic, payload.toByteArray())
     operator fun set(topic: String, payload: ByteArray) = publish(topic, payload)
 
+    /**
+     * Set up and allow [EmergencyStop] to forcilbly terminate the application. This is intended to allow for a single
+     * "stop" to kill everything listening.
+     */
+    fun allowEmergencyStop() {
+        subscribeJSON(KOBOTS_EVENTS) { event ->
+            if (event.getString("name") == STOP_NOW) {
+                logger.error("Emergency stop received")
+                close()
+                exitProcess(3)
+            }
+        }
+    }
+
     override fun close() {
         mqttClient.close()
     }
@@ -245,5 +261,6 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
          * The alive-check topic used by Kobots.
          */
         const val KOBOTS_ALIVE = "kobots/alive"
+        const val KOBOTS_EVENTS = "kobots/events"
     }
 }

@@ -104,8 +104,10 @@ private fun <T : KobotsMessage> getPublisher(topic: String) =
     eventBusMap.computeIfAbsent(topic) { SubmissionPublisher<KobotsMessage>() } as SubmissionPublisher<T>
 
 // specific messages ==================================================================================================
+const val STOP_NOW = "Emergency Stop"
 class EmergencyStop() : KobotsAction {
     override val interruptable: Boolean = false
+    val name = STOP_NOW
 }
 
 val allStop = EmergencyStop()

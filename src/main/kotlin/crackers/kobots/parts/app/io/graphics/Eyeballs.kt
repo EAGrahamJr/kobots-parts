@@ -64,7 +64,6 @@ class Eye(val center: Point, val radius: Int, val pupil: Pupil) : Ocular {
     private var pupilLocation: Point = center
     private val MAX_PUPIL_SIZE = (radius * .75).roundToInt()
 
-
     /**
      * Set the pupil position relative to the eye center. The pupil is constrained to be within the eye and will show
      * at least 80% of the pupil at the outsides of the eye.
