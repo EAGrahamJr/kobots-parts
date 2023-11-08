@@ -79,6 +79,13 @@ tasks {
     generateMetadataFileForLibraryPublication {
         mustRunAfter("dokkaJavadocJar")
     }
+
+    create("depSize") {
+        doLast {
+            val depSize = configurations["compileClasspath"].files.sumOf { it.length() }
+            logger.warn(">>> Dependencies size: ${depSize / 1024} KB")
+        }
+    }
 }
 
 defaultTasks("clean", "build", "dokkaJavadocJar", "libraryDistribution")
