@@ -244,7 +244,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
      */
     fun allowEmergencyStop() {
         subscribeJSON(KOBOTS_EVENTS) { event ->
-            if (event.getString("name") == STOP_NOW) {
+            if (event.optString("name") == STOP_NOW) {
                 logger.error("Emergency stop received")
                 close()
                 exitProcess(3)
