@@ -27,7 +27,7 @@ object KobotSleep {
         SleepUtil.busySleep(nanos)
     }
 
-    fun micos(micros: Long) {
+    fun micros(micros: Long) {
         duration(Duration.ofNanos(micros * 100))
     }
 

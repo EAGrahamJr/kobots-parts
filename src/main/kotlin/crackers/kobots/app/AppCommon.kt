@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * This is _highly_ opinionated and is not necessarily intended to be a general purpose library for anyone but myself.
  */
 object AppCommon {
-    private val logger = LoggerFactory.getLogger("AppCommon")
+    private val logger by lazy { LoggerFactory.getLogger("AppCommon") }
 
     /**
      * A generally sharable executor for running things. Most apps will rely on either callbacks or futures, so this
@@ -77,6 +77,20 @@ object AppCommon {
 
             runFlag.set(value)
         }
+
+    /**
+     * Run a [block] if the application is running. This is a convenience method for checking the [applicationRunning]
+     * and catching any errors that occur in the block.
+     */
+    fun whileRunning(block: () -> Unit) {
+        if (applicationRunning) {
+            try {
+                block()
+            } catch (t: Throwable) {
+                logger.error("Error in execution", t)
+            }
+        }
+    }
 
     /**
      * Run a [block] and ensure it takes up **at least** [maxPause] time. This is basically to keep polling or control
@@ -147,4 +161,9 @@ object AppCommon {
 
     fun goToSleep() = publishToTopic(SLEEP_TOPIC, SleepEvent(true))
     fun wakey() = publishToTopic(SLEEP_TOPIC, SleepEvent(false))
+
+    /**
+     * The remote hostname property used for the diozero remote daemon.
+     */
+    const val REMOTE_PI = "diozero.remote.hostname"
 }
