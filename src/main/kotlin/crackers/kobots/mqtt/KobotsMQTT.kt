@@ -242,9 +242,11 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     /**
      * Set up and allow [EmergencyStop] to forcilbly terminate the application. This is intended to allow for a single
      * "stop" to kill everything listening.
+     *
+     * **NOTE** This uses a separate topic from everything else and should be "private" to this function.
      */
     fun allowEmergencyStop() {
-        subscribeJSON(KOBOTS_EVENTS) { event ->
+        subscribeJSON(KOBOTS_STOP) { event ->
             if (event.optString("name") == STOP_NOW) {
                 logger.error("Emergency stop received")
                 close()
@@ -257,7 +259,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
      * Publish an [EmergencyStop] event. This should kill everything listenening. See [allowEmergencyStop].
      */
     fun emergencyStop() {
-        publish(KOBOTS_EVENTS, JSONObject(EmergencyStop()))
+        publish(KOBOTS_STOP, JSONObject(EmergencyStop()))
     }
 
     override fun close() {
@@ -274,5 +276,10 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
          * Sequence events are published to this topic.
          */
         const val KOBOTS_EVENTS = "kobots/events"
+
+        /**
+         * Emergency stops on a separate topic.
+         */
+        private const val KOBOTS_STOP = "kobots/stop"
     }
 }
