@@ -14,9 +14,9 @@
  * permissions and limitations under the License.
  */
 
-package crackers.kobots.parts.app.io
+package crackers.kobots.parts.app.io.graphics
 
-import crackers.kobots.parts.app.io.PointerGauge.Shape
+import crackers.kobots.parts.app.io.graphics.PointerGauge.Shape
 import java.awt.*
 import java.awt.geom.*
 import java.util.concurrent.atomic.AtomicBoolean
