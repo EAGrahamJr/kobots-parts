@@ -77,6 +77,13 @@ fun <T : KobotsMessage> joinTopic(topic: String, listener: KobotsSubscriber<T>, 
 }
 
 /**
+ * Get items 1 at a time.
+ */
+fun <T : KobotsMessage> joinTopic(topic: String, listener: KobotsSubscriber<T>) {
+    joinTopic(topic, listener, 1)
+}
+
+/**
  * Stop getting items.
  */
 @Suppress("UNCHECKED_CAST")
