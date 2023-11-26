@@ -21,6 +21,7 @@ import com.diozero.devices.sandpit.motor.StepperMotorInterface
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.BACKWARD
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.FORWARD
 import crackers.kobots.devices.at
+import crackers.kobots.parts.movement.LimitedRotator.Companion.MAX_ANGLE
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -30,6 +31,9 @@ import kotlin.math.roundToInt
  * corresponding to real world coordinates.
  */
 interface Rotator : Actuator<RotationMovement> {
+    /**
+     * Take a "step" towards this destination. Returns `true` if the target has been reached.
+     */
     override infix fun move(movement: RotationMovement): Boolean {
         return rotateTo(movement.angle)
     }
@@ -94,25 +98,6 @@ interface Rotator : Actuator<RotationMovement> {
 }
 
 /**
- * A [Rotator] that is constrained to a physical angular range, in degrees. This is useful for servos that are not
- * "continuous rotation" types.
- *
- * @param physicalRange the physical range of the rotator, in degrees
- */
-interface LimitedRotator : Rotator {
-    val physicalRange: IntRange
-
-    /**
-     * Operator to rotate to a percentage of the physical range. For example, if the physical range is `0..180`, then
-     * `rotator % 50` would rotate to 90 degrees.
-     */
-    operator fun rem(percentage: Int): Boolean {
-        val range = physicalRange.last - physicalRange.first
-        return rotateTo(physicalRange.first + (range * percentage / 100f).roundToInt())
-    }
-}
-
-/**
  * Stepper motor with an optional gear ratio. If [reversed] is `true`, the motor is mounted "backwards" relative to
  * desired rotation. Each movement is executed as a single step of the motor.
  *
@@ -156,6 +141,83 @@ class BasicStepperRotator(
         // are we there yet?
         return destinationSteps == stepsLocation
     }
+}
+
+/**
+ * A [Rotator] that is constrained to a physical angular range, in degrees. This is useful for servos that are not
+ * "continuous rotation" types.
+ *
+ * @param physicalRange the physical range of the rotator, in degrees
+ */
+interface LimitedRotator : Rotator {
+    val physicalRange: IntRange
+
+    /**
+     * Operator to rotate to a percentage of the physical range. For example, if the physical range is `0..180`, then
+     * `rotator % 50` would rotate to 90 degrees.
+     */
+    operator fun rem(percentage: Int): Boolean {
+        val range = physicalRange.last - physicalRange.first
+        return rotateTo(physicalRange.first + (range * percentage / 100f).roundToInt())
+    }
+
+    companion object {
+        /**
+         * Create a [LimitedRotator] based on a [SimpleServoRotator]
+         */
+        fun ServoDevice.create(
+            physicalRange: IntRange,
+            deltaDegrees: Int? = 1
+        ): LimitedRotator = SimpleServoRotator(this, physicalRange, deltaDegrees)
+
+        /**
+         * Create a [LimitedRotator] based on a [ServoRotator]
+         */
+        fun ServoDevice.create(
+            physicalRange: IntRange,
+            servoRange: IntRange,
+            deltaDegrees: Int? = 1
+        ): LimitedRotator = ServoRotator(this, physicalRange, servoRange, deltaDegrees)
+
+        const val MAX_ANGLE = Int.MAX_VALUE
+        const val MIN_ANGLE = -MAX_ANGLE
+    }
+}
+
+/**
+ * Servo, with software limits to prevent over-rotation. Each "step" is controlled by the `deltaDegrees` parameter
+ * (`null` means absolute movement, default 1 degree per "step"). Servo movement is done in "whole degrees" (int), so
+ * there may be some small rounding errors.
+ *
+ * The servo motion is modeled as a "simple" servo, with no gear ratio or other mechanical limitations.
+ */
+class SimpleServoRotator(
+    private val theServo: ServoDevice,
+    private val servoRange: IntRange,
+    private val deltaDegrees: Int? = 1
+) : LimitedRotator {
+    override val physicalRange: IntRange
+        get() = servoRange
+
+    override fun rotateTo(angle: Int): Boolean {
+        // special case -- if the target is MAXINT, use the physical range as the target
+        // NOTE -- this may cause the servo to jitter or not move at all
+        if (abs(angle) == MAX_ANGLE) {
+            return rotateTo(if (angle < 0) physicalRange.first else physicalRange.last)
+        }
+
+        require(angle in physicalRange) { "Angle '$angle' is not in physical range '$physicalRange'." }
+        val diff = abs(angle - theServo.angle)
+        when {
+            diff < .1 -> return true
+            angle < theServo.angle -> if (deltaDegrees == null) theServo at angle else theServo at theServo.angle - deltaDegrees
+            angle > theServo.angle -> if (deltaDegrees == null) theServo at angle else theServo at theServo.angle + deltaDegrees
+            else -> return true
+        }
+        return false
+    }
+
+    override fun current(): Int = theServo.angle.roundToInt()
 }
 
 /**
@@ -220,6 +282,12 @@ class ServoRotator(
      * Figure out if we need to move or not (and how much)
      */
     override fun rotateTo(angle: Int): Boolean {
+        // special case -- if the target is MAXINT, use the physical range as the target
+        // NOTE -- this may cause the servo to jitter or not move at all
+        if (abs(angle) == Int.MAX_VALUE) {
+            return rotateTo(if (angle < 0) physicalRange.first else physicalRange.last)
+        }
+
         // angle must be in the physical range
         require(angle in physicalRange) { "Angle '$angle' is not in physical range '$physicalRange'." }
 
