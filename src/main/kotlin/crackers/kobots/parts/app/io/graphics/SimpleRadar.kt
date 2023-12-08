@@ -84,5 +84,4 @@ class SimpleRadar(
     }
 
     private fun Int.reverseAngleInRadians(): Double = Math.toRadians(-this.toDouble())
-
 }

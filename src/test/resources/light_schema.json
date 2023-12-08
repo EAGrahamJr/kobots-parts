@@ -1,0 +1,30 @@
+{
+    "schema": "json",
+    "entity_category": "config",
+    "unique_id": "test_light",
+    "state_topic": "kobots_ha/test_light/state",
+    "color_mode": true,
+    "icon": "mdi:lightbulb",
+    "supported_color_modes": [
+        "color_temp",
+        "hs",
+        "rgb"
+    ],
+    "effect_list": [
+        "effect1",
+        "effect2"
+    ],
+    "command_topic": "kobots_ha/test_light/set",
+    "brightness": true,
+    "effect": true,
+    "name": "Test Light",
+    "device": {
+        "identifiers": [
+            "test_light",
+            "edlap"
+        ],
+        "name": "test_light",
+        "model": "KobotLight",
+        "manufacturer": "Kobots"
+    }
+}

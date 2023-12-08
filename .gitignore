@@ -11,3 +11,5 @@ bin
 .DS*
 
 *.conf
+*.lck
+*.log

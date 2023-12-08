@@ -14,7 +14,7 @@
  * permissions and limitations under the License.
  */
 
-package crackers.kobots.parts
+package crackers.kobots
 
 import io.kotest.core.config.AbstractProjectConfig
 
@@ -23,6 +23,7 @@ import io.kotest.core.config.AbstractProjectConfig
  */
 class ProjectLevelTestConfig : AbstractProjectConfig() {
     init {
+        System.setProperty("mqtt.broker", "tcp://localhost:1883")
         displayFullTestPath = true
     }
 }

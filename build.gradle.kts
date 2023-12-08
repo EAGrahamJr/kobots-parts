@@ -5,7 +5,7 @@ buildscript {
 }
 
 plugins {
-    kotlin("jvm") version "1.9.0"
+    kotlin("jvm") version "1.9.20"
     idea
     id("org.jmailen.kotlinter") version "3.12.0"
     id("library-publish") version "1.0.1"
@@ -38,7 +38,14 @@ dependencies {
 
     testImplementation("io.kotest:kotest-runner-junit5:5.6.2")
     testImplementation("io.mockk:mockk:1.13.5")
+    testImplementation("org.testcontainers:testcontainers:1.19.3")
+    testImplementation("ch.qos.logback:logback-classic:1.3.0")
+
+    // re-create all the depndencies for testing
     testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
+    testImplementation("org.json:json:20230227")
+    testImplementation("com.typesafe:config:1.4.2")
+    testImplementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
 }
 
 kotlin {

@@ -26,6 +26,7 @@ import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.ZonedDateTime
+import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -47,7 +48,14 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     private lateinit var aliveCheckFuture: ScheduledFuture<*>
     private val aliveCheckEnabled = AtomicBoolean(false)
 
-    private val mqttClient: MqttAsyncClient by lazy {
+    interface ConnectListener {
+        fun onConnect(reconnect: Boolean)
+        fun onDisconnect()
+    }
+
+    private val connectListeners = CopyOnWriteArraySet<ConnectListener>()
+
+    internal val mqttClient: MqttAsyncClient by lazy {
         val options = MqttConnectionOptions().apply {
             isAutomaticReconnect = true
             isCleanStart = true
@@ -65,6 +73,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
             logger.error("Disconnected: ${disconnectResponse.exception}")
             // kill the alive-checker
             cancelAliveCheck()
+            connectListeners.forEach { it.onDisconnect() }
         }
 
         override fun mqttErrorOccurred(exception: MqttException) {
@@ -88,6 +97,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
             } else {
                 logger.warn("Alive-check is not enabled")
             }
+            connectListeners.forEach { it.onConnect(reconnect) }
         }
 
         override fun authPacketArrived(reasonCode: Int, properties: MqttProperties?) {
@@ -174,9 +184,13 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
      */
     fun subscribe(topic: String, listener: (String) -> Unit) {
         // only subscribe a listener once
+        if (subscribers[topic]?.contains(listener) == true) return
+
+        // save it in the list of subscribers for re-subscribing on re-connect
         subscribers.compute(topic) { _, list ->
             list?.apply { add(listener) } ?: mutableSetOf(listener)
         }
+        // wrap it and do the actual subscription
         addListener(topic, listener)
     }
 
@@ -192,14 +206,24 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
      * Add a listener to a topic.
      */
     private fun addListener(topic: String, listener: (String) -> Unit) {
+        addTopicListener(topic, { _, payload -> listener(payload.decodeToString()) })
+    }
+
+    /**
+     * Add a listener to a topic. Exposed to the rest of the library for more extended use. Errors are trapped, so if
+     * there is a problem with the listener, it will be logged and ignored.
+     *
+     * TODO should this be public?
+     */
+    internal fun addTopicListener(topic: String, listener: (String, ByteArray) -> Unit) {
         val sub = MqttSubscription(topic, 0)
         // STUPID FUCKING BUG!!!!
         val props = MqttProperties().apply {
             subscriptionIdentifiers = listOf(0)
         }
-        val wrapper = IMqttMessageListener { _, message ->
+        val wrapper = IMqttMessageListener { receivingTopic, message ->
             try {
-                listener(message.payload.decodeToString())
+                listener(receivingTopic, message.payload)
             } catch (t: Throwable) {
                 logger.error("Subscriber error", t)
             }
@@ -236,11 +260,12 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
      * mqtt["topic"] = "payload"
      * ```
      */
+    operator fun set(topic: String, payload: JSONObject) = publish(topic, payload.toString())
     operator fun set(topic: String, payload: String) = publish(topic, payload.toByteArray())
     operator fun set(topic: String, payload: ByteArray) = publish(topic, payload)
 
     /**
-     * Set up and allow [EmergencyStop] to forcilbly terminate the application. This is intended to allow for a single
+     * Set up and allow [EmergencyStop] to forcibly terminate the application. This is intended to allow for a single
      * "stop" to kill everything listening.
      *
      * **NOTE** This uses a separate topic from everything else and should be "private" to this function.
@@ -256,7 +281,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     }
 
     /**
-     * Publish an [EmergencyStop] event. This should kill everything listenening. See [allowEmergencyStop].
+     * Publish an [EmergencyStop] event. This should kill everything listening. See [allowEmergencyStop].
      */
     fun emergencyStop() {
         publish(KOBOTS_STOP, JSONObject(EmergencyStop()))
@@ -264,6 +289,11 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
 
     override fun close() {
         mqttClient.close()
+    }
+
+    fun addConnectListener(listener: ConnectListener) {
+        connectListeners.add(listener)
+        if (mqttClient.isConnected) listener.onConnect(false)
     }
 
     companion object {
