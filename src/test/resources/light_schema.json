@@ -7,7 +7,6 @@
     "icon": "mdi:lightbulb",
     "supported_color_modes": [
         "color_temp",
-        "hs",
         "rgb"
     ],
     "effect_list": [
@@ -23,7 +22,7 @@
             "test_light",
             "edlap"
         ],
-        "name": "test_light",
+        "name": "Test Light",
         "model": "KobotLight",
         "manufacturer": "Kobots"
     }
