@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Controller for a light device backed by a
- * [Pimoroni LED Shim](https://shop.pimoroni .com/products/led-shim?variant=3136952467466) on a Raspberry Pi.
+ * [Pimoroni LED Shim](https://shop.pimoroni.com/products/led-shim?variant=3136952467466) on a Raspberry Pi.
  *
  * **NOTE** This product is no longer available.
  */
@@ -27,8 +27,9 @@ class PimoroniShimController(private val device: PimoroniLEDShim) : LightControl
         } else {
             device.sleep(false)
             currentState.set(true)
-            if (command.effect != null) manageEffect(command.effect)
-            else {
+            if (command.effect != null) {
+                manageEffect(command.effect)
+            } else {
                 currentEffect.set(null)
                 // if the command color is not null, use it, otherwise use the current color
                 var newColor = command.color ?: currentColor.get()

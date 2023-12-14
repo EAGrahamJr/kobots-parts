@@ -6,6 +6,7 @@ import crackers.kobots.parts.app.KobotSleep
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * What is this thing?
@@ -72,6 +73,9 @@ interface KobotDevice : Comparable<KobotDevice> {
  */
 abstract class AbstractKobotDevice(override val uniqueId: String, override val name: String) : KobotDevice {
     private val logger = LoggerFactory.getLogger(javaClass.simpleName)
+    private val conntected = AtomicBoolean(false)
+    protected val homeassistantAvailable: Boolean
+        get() = conntected.get()
 
     /**
      * The MQTT topic for the device's state (send).
@@ -108,37 +112,50 @@ abstract class AbstractKobotDevice(override val uniqueId: String, override val n
         }
     }
 
-    fun start() {
-        // add a re-connect listener to the MQTT client to send state`when the connection is re-established
-        mqttClient.addConnectListener(object : KobotsMQTT.ConnectListener {
+    fun start() = with(mqttClient) {
+        // add a (re-)connect listener to the MQTT client to send state`when the connection is re-established
+        addConnectListener(object : KobotsMQTT.ConnectListener {
             override fun onConnect(reconnect: Boolean) {
-                logger.info("Sending discovery for $uniqueId")
-                sendDiscovery()
-                logger.info("Waiting 2 seconds for discovery to be processed")
-                KobotSleep.seconds(2)
-                sendCurrentState()
+                redoConnection()
             }
 
             override fun onDisconnect() {
-                // no-op
+                conntected.set(false)
             }
         })
         // subscribe to the command topic (expecting JSON payload)
-        mqttClient.subscribeJSON(commandTopic, ::handleCommand)
+        subscribeJSON(commandTopic, ::handleCommand)
+        // subscribe to the HA LWT topic and send discovery on "online" status
+        subscribe("homeassistant/status") { message ->
+            if (message == "online") redoConnection() else conntected.set(false)
+        }
+    }
+
+    /**
+     * Re-do the connection to HomeAssistant, which means sending the discovery message and the current state.
+     */
+    protected open fun redoConnection() {
+        conntected.set(true)
+        sendDiscovery()
+        logger.info("Waiting 2 seconds for discovery to be processed")
+        KobotSleep.seconds(2)
+        sendCurrentState()
     }
 
     /**
      * Send the discovery message for this device.
      */
     protected open fun sendDiscovery(discoveryPayload: JSONObject = discovery()) {
-        logger.info("Sending discovery for $uniqueId")
-        mqttClient["homeassistant/$component/$uniqueId/config"] = discoveryPayload
+        if (homeassistantAvailable) {
+            logger.info("Sending discovery for $uniqueId")
+            mqttClient["homeassistant/$component/$uniqueId/config"] = discoveryPayload
+        }
     }
 
     /**
      * Send the current state message for this device.
      */
     protected open fun sendCurrentState(state: JSONObject = currentState()) {
-        mqttClient[statusTopic] = state
+        if (homeassistantAvailable) mqttClient[statusTopic] = state
     }
 }
