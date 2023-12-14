@@ -18,7 +18,7 @@ class SinglePixelLightController(private val theStrand: PixelBuf, private val in
         return LightState(
             state = state,
             brightness = if (state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
-            color = lastColor.color.toLightColor(),
+            color = lastColor.color.toLightColor()
         )
     }
 
