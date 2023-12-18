@@ -15,7 +15,7 @@ There are two main sections.
 - [Actuators and Movements](Movements.md)
 - [Event Bus](EventBus.md)
 
-Javadocs are published at the ]GitHub Pages](https://eagrahamjr.github.io/kobots-parts/) for this project.
+Javadocs are published at the [GitHub Pages](https://eagrahamjr.github.io/kobots-parts/) for this project.
 
 
 
