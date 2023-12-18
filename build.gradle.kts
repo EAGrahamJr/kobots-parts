@@ -21,6 +21,7 @@ repositories {
 
 val DIOZERO_VER = "1.4.0"
 val DEVICES_VER = "0.2+"
+val HASSK_VER = "0+"
 
 group = "crackers.kobots"
 
@@ -31,7 +32,7 @@ dependencies {
     compileOnly("com.typesafe:config:1.4.2")
 
     // optional parts
-    compileOnly("crackers.automation:hassk:0.0.1") {
+    compileOnly("crackers.automation:hassk:$HASSK_VER") {
         exclude(group = "ch.qos.logback")
     }
     compileOnly("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
