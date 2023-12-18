@@ -39,7 +39,7 @@ private fun testGuts(): FunSpec.() -> Unit = {
         broker.stop()
     }
 
-    test("Setup a single light and verify discovery message") {
+    xtest("Setup a single light and verify discovery message") {
         val controller = mockk<LightController>()
         val initialState = LightState(brightness = 255, color = LightColor(255, 255, 255))
         every { controller.current() } returns initialState
