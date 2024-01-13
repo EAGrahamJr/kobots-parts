@@ -70,8 +70,15 @@ interface KobotDevice : Comparable<KobotDevice> {
  * Because it's part of this package, it assumes usage of the [AppCommon.mqttClient] singleton.
  *
  * Devices may be removed from HomeAssistant at any time, so the discovery message is sent on every connection.
+ *
+ * **Note** the [name] property is the name of the _entity_, not the device. The _entityId_ of the device in Home
+ * Assistant will be constructed from the category, uniqueId, and name -- e.g. `light.sparkle_night_light`.
  */
-abstract class AbstractKobotDevice(override val uniqueId: String, override val name: String) : KobotDevice {
+abstract class AbstractKobotDevice(final override val uniqueId: String, final override val name: String) : KobotDevice {
+    init {
+        require(uniqueId.isNotBlank()) { "'uniqeId' must not be blank." }
+        require(name.isNotBlank()) { "'name' must not be blank." }
+    }
     private val logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val conntected = AtomicBoolean(false)
     protected val homeassistantAvailable: Boolean
@@ -95,7 +102,7 @@ abstract class AbstractKobotDevice(override val uniqueId: String, override val n
     val baseConfiguration by lazy {
         val deviceId = JSONObject().apply {
             put("identifiers", listOf(uniqueId, deviceIdentifier.identifer))
-            put("name", if (name.isNotBlank()) name else uniqueId)
+            put("name", deviceIdentifier.identifer)
             put("model", deviceIdentifier.model)
             put("manufacturer", deviceIdentifier.manufacturer)
         }
@@ -105,7 +112,7 @@ abstract class AbstractKobotDevice(override val uniqueId: String, override val n
             put("device", deviceId)
             put("entity_category", "config")
             put("icon", deviceIdentifier.icon)
-            if (name.isNotBlank()) put("name", name)
+            put("name", name)
             put("schema", "json")
             put("state_topic", statusTopic)
             put("unique_id", uniqueId)

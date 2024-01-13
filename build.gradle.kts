@@ -10,7 +10,7 @@ plugins {
     id("org.jmailen.kotlinter") version "3.12.0"
     id("library-publish") version "1.0.1"
     id("org.jetbrains.dokka") version "1.8.10"
-    // ***NOTE*** semver is applied on push so it's the _next_ version
+    // ***NOTE*** semver is applied on push, so it's the _next_ version
     id("net.thauvin.erik.gradle.semver") version "1.0.4"
 }
 
@@ -28,7 +28,7 @@ group = "crackers.kobots"
 dependencies {
     // these are likely to be the ones in use
     compileOnly("crackers.kobots:kobots-devices:$DEVICES_VER")
-    compileOnly("org.json:json:20230227")
+    compileOnly("org.json:json:20231013")
     compileOnly("com.typesafe:config:1.4.2")
 
     // optional parts
@@ -40,11 +40,11 @@ dependencies {
     testImplementation("io.kotest:kotest-runner-junit5:5.6.2")
     testImplementation("io.mockk:mockk:1.13.5")
     testImplementation("org.testcontainers:testcontainers:1.19.3")
-    testImplementation("ch.qos.logback:logback-classic:1.3.0")
+    testImplementation("ch.qos.logback:logback-classic:1.4.12")
 
     // re-create all the depndencies for testing
     testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
-    testImplementation("org.json:json:20230227")
+    testImplementation("org.json:json:20231013")
     testImplementation("com.typesafe:config:1.4.2")
     testImplementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
 }
