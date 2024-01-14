@@ -25,8 +25,10 @@ import java.awt.image.BufferedImage
 
 /**
  * An abstract class that creates screen graphics for the NeoKeyMenu display. This is primarily intended for use with a
- * small OLED display (e.g. 128x32). This class only creates image: the [displayFun] receiver function is responsible for
- * displaying the image.
+ * small OLED display (e.g. 128x32). This class only creates the _image_: the [displayFun] receiver function is
+ * responsible for displaying the image. It also
+ *
+ * If the [mode] is [DisplayMode.TEXT], the image is constructed with two items on two rows.
  *
  * The assumption for sizing is that the number of items given to display (4) _should_ fit (128/32).
  *

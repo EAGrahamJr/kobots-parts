@@ -23,16 +23,16 @@ import java.awt.Image
 import kotlin.math.min
 
 /**
- * An "actionable" menu using the NeoKey. Due to the limited number of buttons, the menu is "rotated" between the
- * number of keys available. The [display] will get a subset of `n-1` items, plus a "next" item. The "next" item will
- * rotate the menu to the next subset of items.
+ * An "actionable" menu using the NeoKey. Due to the limited number of buttons, if there are more than 4 items, the menu
+ * can be "rotated" to show a subset of the menu items, plus a "next" item. The "next" item will rotate the menu to the
+ * next subset of items. A list of 4 or fewer items will always be sent to the [display],
  *
  * The calling application can use the return map to determine which button was pressed and what action to take,
  * executing more than one if desired. This also allows the application to use the keys to "chord" actions that are
  * not necessarily menu items.
  */
 open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items: List<MenuItem>) {
-    private val logger = LoggerFactory.getLogger("NeoKeyMenu")
+    private val logger by lazy { LoggerFactory.getLogger("NeoKeyMenu") }
 
     // clone immutable list
     private val menuItems = items.toList()
@@ -57,16 +57,22 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
      * @param buttonColor the color to use for the button (default GREEN)
      * @param action the action to take when the button is pressed
      */
-    class MenuItem(
+    open class MenuItem(
         val name: String,
         val abbrev: String? = null,
         val icon: Image? = null,
         val buttonColor: Color = Color.GRAY,
         val action: () -> Unit
     ) {
+        /**
+         * Returns the abbreviation if set, otherwise the name.
+         */
         override fun toString() = abbrev ?: name
     }
 
+    /**
+     * A menu item that rotates an over-sized menu to the "next" page
+     */
     private val nextMenuItem by lazy {
         MenuItem("Next", buttonColor = Color.MAGENTA.darker(), icon = loadImage("/arrow_forward.png")) {
             displayMenuFromIndex(leftMostIndex + maxItemsToShow - 1)
@@ -112,7 +118,9 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
     }
 
     /**
-     * Executes the action described for the "first" button pressed. Returns `true` if the action was executed.
+     * Convenience function that executes the action described for the "first" (list-order) button pressed. There is
+     * **no** error handling around action calls.
+     * @return `true` if an action was invoked
      */
     @Synchronized
     open fun firstButton(): Boolean = execute().firstOrNull()?.second?.action?.invoke()?.let { true } ?: false
