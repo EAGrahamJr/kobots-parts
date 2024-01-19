@@ -1,7 +1,7 @@
-package crackers.kobots.mqtt
+package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.devices.lighting.PimoroniLEDShim
-import crackers.kobots.mqtt.LightColor.Companion.toLightColor
+import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import crackers.kobots.parts.scale
 import java.awt.Color
 import java.util.concurrent.atomic.AtomicBoolean
@@ -60,4 +60,6 @@ class PimoroniShimController(private val device: PimoroniLEDShim) : LightControl
         color = currentColor.get().toLightColor(),
         effect = currentEffect.get()
     )
+
+    override fun controllerIcon() = "mdi:led-strip"
 }

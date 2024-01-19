@@ -1,8 +1,8 @@
-package crackers.kobots.mqtt
+package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.devices.lighting.PixelBuf
 import crackers.kobots.devices.lighting.WS2811
-import crackers.kobots.mqtt.LightColor.Companion.toLightColor
+import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import java.awt.Color
 import kotlin.math.roundToInt
 

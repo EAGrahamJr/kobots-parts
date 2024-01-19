@@ -10,10 +10,11 @@ Contains basic application construction elements that are being used in my vario
 - A simplified event-bus for in-process communication
 - Wrappers around MQTT for external communications
 
-There are two main sections.
+There are three main sections.
 
 - [Actuators and Movements](Movements.md)
 - [Event Bus](EventBus.md)
+- [Home Assistant](HomeAssistant.md)
 
 Javadocs are published at the [GitHub Pages](https://eagrahamjr.github.io/kobots-parts/) for this project.
 

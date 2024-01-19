@@ -1,7 +1,8 @@
-package crackers.kobots.mqtt
+package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.app.AppCommon.mqttClient
-import crackers.kobots.mqtt.KobotDevice.Companion.KOBOTS_MQTT
+import crackers.kobots.mqtt.KobotsMQTT
+import crackers.kobots.mqtt.homeassistant.KobotDevice.Companion.KOBOTS_MQTT
 import crackers.kobots.parts.app.KobotSleep
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
@@ -45,6 +46,8 @@ interface KobotDevice : Comparable<KobotDevice> {
 
     /**
      * Generate the MQTT discovery message for this device.
+     *
+     * **NOTE** This should be modified by each entity for it's special cases.
      */
     fun discovery(): JSONObject
 
@@ -52,11 +55,6 @@ interface KobotDevice : Comparable<KobotDevice> {
      * Generate the MQTT state message for this device.
      */
     fun currentState(): JSONObject
-
-    /**
-     * Handle the MQTT command message for this device.
-     */
-    fun handleCommand(payload: JSONObject)
 
     override fun compareTo(other: KobotDevice): Int = uniqueId.compareTo(other.uniqueId)
 
@@ -69,57 +67,51 @@ interface KobotDevice : Comparable<KobotDevice> {
  * Abstraction for common attributes and methods for all Kobot devices for integration with Home Assistant via MQTT.
  * Because it's part of this package, it assumes usage of the [AppCommon.mqttClient] singleton.
  *
- * Devices may be removed from HomeAssistant at any time, so the discovery message is sent on every connection.
+ * Devices may be removed from HomeAssistant at any time, so the discovery message is sent on every connection. Birth
+ * and last-will messages are **not** used because the client can be used for other things besides HA.
  *
- * **Note** the [name] property is the name of the _entity_, not the device. The _entityId_ of the device in Home
- * Assistant will be constructed from the category, uniqueId, and name -- e.g. `light.sparkle_night_light`.
+ * **Note** the [uniqueId] and [name] properties are the name of the _entity_, not the device (see
+ * [DeviceIdentifier] -- a device may have several entities). The _entityId_ in Home Assistant will be constructed from
+ * the category, uniqueId, and name -- e.g. `light.sparkle_night_light`.
  */
 abstract class AbstractKobotDevice(final override val uniqueId: String, final override val name: String) : KobotDevice {
     init {
         require(uniqueId.isNotBlank()) { "'uniqeId' must not be blank." }
         require(name.isNotBlank()) { "'name' must not be blank." }
     }
+
     private val logger = LoggerFactory.getLogger(javaClass.simpleName)
-    private val conntected = AtomicBoolean(false)
+    private val connected = AtomicBoolean(false)
     protected val homeassistantAvailable: Boolean
-        get() = conntected.get()
+        get() = connected.get()
 
     /**
      * The MQTT topic for the device's state (send).
      */
-    val statusTopic by lazy { "$KOBOTS_MQTT/$uniqueId/state" }
-
-    /**
-     * The MQTT topic for the device's command (receive).
-     */
-    val commandTopic by lazy { "$KOBOTS_MQTT/$uniqueId/set" }
+    val statusTopic = "$KOBOTS_MQTT/$uniqueId/state"
 
     /**
      * A generic configuration for the device, which can be used to generate the discovery message
      * because there are too many "base" configuration parameters to be able to handle them cleanly,
      * so just dump it on the child class to figure it out.
      */
-    val baseConfiguration by lazy {
-        val deviceId = JSONObject().apply {
-            put("identifiers", listOf(uniqueId, deviceIdentifier.identifer))
-            put("name", deviceIdentifier.identifer)
-            put("model", deviceIdentifier.model)
-            put("manufacturer", deviceIdentifier.manufacturer)
-        }
+    override fun discovery() = JSONObject().apply {
+        val deviceId = JSONObject()
+            .put("identifiers", listOf(uniqueId, deviceIdentifier.identifer))
+            .put("name", deviceIdentifier.identifer)
+            .put("model", deviceIdentifier.model)
+            .put("manufacturer", deviceIdentifier.manufacturer)
 
-        JSONObject().apply {
-            put("command_topic", commandTopic)
-            put("device", deviceId)
-            put("entity_category", "config")
-            put("icon", deviceIdentifier.icon)
-            put("name", name)
-            put("schema", "json")
-            put("state_topic", statusTopic)
-            put("unique_id", uniqueId)
-        }
+        put("device", deviceId)
+        put("entity_category", "config")
+        put("icon", deviceIdentifier.icon)
+        put("name", name)
+        put("schema", "json")
+        put("state_topic", statusTopic)
+        put("unique_id", uniqueId)
     }
 
-    fun start() = with(mqttClient) {
+    open fun start() = with(mqttClient) {
         // add a (re-)connect listener to the MQTT client to send state`when the connection is re-established
         addConnectListener(object : KobotsMQTT.ConnectListener {
             override fun onConnect(reconnect: Boolean) {
@@ -127,14 +119,12 @@ abstract class AbstractKobotDevice(final override val uniqueId: String, final ov
             }
 
             override fun onDisconnect() {
-                conntected.set(false)
+                connected.set(false)
             }
         })
-        // subscribe to the command topic (expecting JSON payload)
-        subscribeJSON(commandTopic, ::handleCommand)
         // subscribe to the HA LWT topic and send discovery on "online" status
         subscribe("homeassistant/status") { message ->
-            if (message == "online") redoConnection() else conntected.set(false)
+            if (message == "online") redoConnection() else connected.set(false)
         }
     }
 
@@ -142,7 +132,7 @@ abstract class AbstractKobotDevice(final override val uniqueId: String, final ov
      * Re-do the connection to HomeAssistant, which means sending the discovery message and the current state.
      */
     protected open fun redoConnection() {
-        conntected.set(true)
+        connected.set(true)
         sendDiscovery()
         logger.info("Waiting 2 seconds for discovery to be processed")
         KobotSleep.seconds(2)
@@ -165,4 +155,27 @@ abstract class AbstractKobotDevice(final override val uniqueId: String, final ov
     protected open fun sendCurrentState(state: JSONObject = currentState()) {
         if (homeassistantAvailable) mqttClient[statusTopic] = state
     }
+}
+
+abstract class CommandDevice(uniqueId: String, name: String) : AbstractKobotDevice(uniqueId, name) {
+    /**
+     * The MQTT topic for the device's command (receive).
+     */
+    val commandTopic = "$KOBOTS_MQTT/$uniqueId/set"
+
+    /**
+     * Handle the MQTT command message for this device.
+     */
+    abstract fun handleCommand(payload: JSONObject)
+
+    /**
+     * Over-ride the base class to add a subscription to handle commands.
+     */
+    override fun start() {
+        super.start()
+        // subscribe to the command topic (expecting JSON payload)
+        mqttClient.subscribeJSON(commandTopic, ::handleCommand)
+    }
+
+    override fun discovery() = super.discovery().put("command_topic", commandTopic)
 }

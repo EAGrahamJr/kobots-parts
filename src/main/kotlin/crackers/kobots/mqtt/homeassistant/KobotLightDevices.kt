@@ -1,7 +1,7 @@
-package crackers.kobots.mqtt
+package crackers.kobots.mqtt.homeassistant
 
-import crackers.kobots.mqtt.LightColor.Companion.toLightColor
-import crackers.kobots.mqtt.LightCommand.Companion.commandFrom
+import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
+import crackers.kobots.mqtt.homeassistant.LightCommand.Companion.commandFrom
 import crackers.kobots.parts.kelvinToRGB
 import org.json.JSONObject
 import java.awt.Color
@@ -108,6 +108,8 @@ interface LightController {
      * to address each LED individually, offset by 1.
      */
     fun current(): LightState
+
+    fun controllerIcon(): String = ""
 }
 
 /**
@@ -137,23 +139,21 @@ val NOOP_CONTROLLER = object : LightController {
 open class KobotLight(
     uniqueId: String,
     private val controller: LightController,
-    name: String = "",
-    val lightEffects: List<String>? = null
+    name: String,
+    val lightEffects: List<String>? = null,
+    override val component: String = "light",
+    override val deviceIdentifier: DeviceIdentifier =
+        DeviceIdentifier("Kobots", controller.javaClass.simpleName, controller.controllerIcon())
 ) :
-    AbstractKobotDevice(uniqueId, name) {
+    CommandDevice(uniqueId, name) {
 
-    override val component = "light"
-    override val deviceIdentifier = DeviceIdentifier("Kobots", "KobotLight", "mdi:lightbulb")
-
-    override fun discovery(): JSONObject {
-        return baseConfiguration.apply {
-            put("brightness", true)
-            put("color_mode", true)
-            put("supported_color_modes", LightColorMode.entries.map { it.name.lowercase() })
-            if (lightEffects != null) {
-                put("effect", true)
-                put("effect_list", lightEffects)
-            }
+    override fun discovery() = super.discovery().apply {
+        put("brightness", true)
+        put("color_mode", true)
+        put("supported_color_modes", LightColorMode.entries.map { it.name.lowercase() })
+        if (lightEffects != null) {
+            put("effect", true)
+            put("effect_list", lightEffects)
         }
     }
 
