@@ -5,6 +5,8 @@ import crackers.kobots.mqtt.homeassistant.LightCommand.Companion.commandFrom
 import crackers.kobots.parts.kelvinToRGB
 import org.json.JSONObject
 import java.awt.Color
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 
 /*
@@ -68,71 +70,34 @@ data class LightState(
  * ```
  */
 data class LightCommand(
-    val state: Boolean,
+    val state: Boolean?,
     val brightness: Int?,
     val color: Color?,
     val effect: String?
 ) {
     companion object {
         fun JSONObject.commandFrom(): LightCommand = with(this) {
-            val state = optString("state", "OFF") == "ON"
-            val effect = optString("effect").takeIf { it.isNotBlank() }
+            val state = optString("state", null)?.let { it == "ON" }
+            val effect = optString("effect", null)
 
             // brightness is 0-255, so translate to 0-100
-            val brightness = optInt("brightness", -1).takeIf { it >= 0 }?.let { it * 100f / 255f }?.roundToInt()
+            val brightness = optInteger("brightness")?.let { it * 100f / 255f }?.roundToInt()
 
             // this is in mireds, so we need to convert to Kelvin
-            val colorTemp = optInt("color_temp", -1).takeIf { it >= 0 }?.let { 1000000 / it }
+            val colorTemp = optInteger("color_temp")?.let { 1000000f / it }?.roundToInt()
 
             val color = optJSONObject("color")?.let {
-                Color(it.optInt("r", 0), it.optInt("g", 0), it.optInt("b", 0))
+                Color(it.optInt("r"), it.optInt("g"), it.optInt("b"))
             } ?: colorTemp?.kelvinToRGB()
             LightCommand(state, brightness, color, effect)
         }
+
+        private fun JSONObject.optInteger(key: String) = optIntegerObject(key, null)
     }
 }
 
 /**
- * Interface for controlling a light. This is used by [KobotLight] and [KobotLightStrip] to abstract the actual
- * hardware implementation.
- */
-interface LightController {
-    /**
-     * Set the state of the light. Node "0" represents either a single LED or a full LED strand. Non-zero indices are
-     * to address each LED individually, offset by 1.
-     */
-    infix fun set(command: LightCommand)
-
-    /**
-     * Get the state of the light. Node "0" represents either a single LED or a full LED strand. Non-zero indices are
-     * to address each LED individually, offset by 1.
-     */
-    fun current(): LightState
-
-    fun controllerIcon(): String = ""
-}
-
-/**
- * Stubbed out implementation of [LightController] that does nothing. This is useful for testing, but not much else.
- */
-val NOOP_CONTROLLER = object : LightController {
-    private var current: LightState = LightState()
-
-    override fun set(command: LightCommand) {
-        println("LightState: $command")
-        current = LightState(
-            state = command.state,
-            brightness = command.brightness ?: current.brightness,
-            color = command.color?.toLightColor() ?: current.color,
-            effect = command.effect ?: current.effect
-        )
-    }
-
-    override fun current(): LightState = current
-}
-
-/**
- * Describes an RGB light. This conforms to the Home Assistant MQTT
+ * Describes a "simple" light. This conforms to the Home Assistant MQTT
  * [light spec](https://www.home-assistant.io/integrations/light.mqtt) and allows for a list of "effects" that can be
  * selected via MQTT.
  */
@@ -140,28 +105,63 @@ open class KobotLight(
     uniqueId: String,
     private val controller: LightController,
     name: String,
-    val lightEffects: List<String>? = null,
-    override val component: String = "light",
-    override val deviceIdentifier: DeviceIdentifier =
-        DeviceIdentifier("Kobots", controller.javaClass.simpleName, controller.controllerIcon())
+    deviceIdentifier: DeviceIdentifier = defaultDeviceIdentifier(controller)
 ) :
-    CommandDevice(uniqueId, name) {
+    CommandEntity(uniqueId, name, deviceIdentifier) {
 
+    final override val component: String = "light"
     override fun discovery() = super.discovery().apply {
         put("brightness", true)
-        put("color_mode", true)
-        put("supported_color_modes", LightColorMode.entries.map { it.name.lowercase() })
-        if (lightEffects != null) {
+        controller.lightEffects?.let {
             put("effect", true)
-            put("effect_list", lightEffects)
+            put("effect_list", it.sorted())
         }
     }
 
     override fun currentState() = controller.current().json()
 
-    override fun handleCommand(payload: JSONObject) {
-        val command = payload.commandFrom()
-        controller set command
+    private val effectFuture = AtomicReference<CompletableFuture<Void>>()
+    private var theFuture: CompletableFuture<Void>? // for pretty
+        get() = effectFuture.get()
+        set(v) {
+            effectFuture.set(v)
+        }
+
+    override fun handleCommand(payload: String) = with(JSONObject(payload).commandFrom()) {
+        // stop any running effect
+        theFuture?.cancel(true)
+
+        if (effect != null) {
+            theFuture = controller.lightEffects?.takeIf { effect in it }?.let { controller exec effect }
+        } else {
+            controller set this
+        }
         sendCurrentState()
+    }
+
+    companion object {
+        /**
+         * Creates a default identifier based on the controller.
+         */
+        fun defaultDeviceIdentifier(controller: LightController) =
+            DeviceIdentifier("Kobots", controller.javaClass.simpleName, controller.controllerIcon)
+    }
+}
+
+/**
+ * Describes an RGB light. This conforms to the Home Assistant MQTT
+ * [light spec](https://www.home-assistant.io/integrations/light.mqtt) and allows for a list of "effects" that can be
+ * selected via MQTT.
+ */
+open class KobotRGBLight(
+    uniqueId: String,
+    controller: LightController,
+    name: String,
+    deviceIdentifier: DeviceIdentifier = defaultDeviceIdentifier(controller)
+) : KobotLight(uniqueId, controller, name, deviceIdentifier) {
+
+    override fun discovery() = super.discovery().apply {
+        put("color_mode", true)
+        put("supported_color_modes", LightColorMode.entries.map { it.name.lowercase() })
     }
 }

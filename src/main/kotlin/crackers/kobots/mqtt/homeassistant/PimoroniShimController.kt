@@ -4,6 +4,7 @@ import crackers.kobots.devices.lighting.PimoroniLEDShim
 import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import crackers.kobots.parts.scale
 import java.awt.Color
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -15,43 +16,40 @@ import java.util.concurrent.atomic.AtomicReference
  * **NOTE** This product is no longer available.
  */
 class PimoroniShimController(private val device: PimoroniLEDShim) : LightController {
-    val currentColor = AtomicReference(Color.BLACK)
-    val currentBrightness = AtomicInteger(0)
-    val currentState = AtomicBoolean(false)
-    val currentEffect = AtomicReference<String>()
+    private val currentColor = AtomicReference(Color.BLACK)
+    private val currentBrightness = AtomicInteger(0)
+    private val currentState = AtomicBoolean(false)
+    private val currentEffect = AtomicReference<String>()
 
-    override fun set(command: LightCommand) {
-        if (!command.state) {
+    override val controllerIcon = "mdi:led-strip"
+    override val lightEffects: List<String>? = null
+
+    override fun set(command: LightCommand) = with(command) {
+        if (state == false) {
             device.sleep(true)
             currentState.set(false)
         } else {
             device.sleep(false)
             currentState.set(true)
-            if (command.effect != null) {
-                manageEffect(command.effect)
-            } else {
-                currentEffect.set(null)
-                // if the command color is not null, use it, otherwise use the current color
-                var newColor = command.color ?: currentColor.get()
-                // if the color is BLACK, use WHITE because that's the only way to turn it on
-                if (newColor == Color.BLACK) newColor = Color.WHITE
+            // if the command color is not null, use it, otherwise use the current color
+            var newColor = command.color ?: currentColor.get()
+            // if the color is BLACK, use WHITE because that's the only way to turn it on
+            if (newColor == Color.BLACK) newColor = Color.WHITE
 
-                // if the brightness is not null, use it, otherwise use the current brightness
-                // if less than or equal to 0, use 100
-                var newBrightness = command.brightness ?: currentBrightness.get()
-                if (newBrightness <= 0) newBrightness = 100
+            // if the brightness is not null, use it, otherwise use the current brightness
+            // if less than or equal to 0, use 100
+            var newBrightness = command.brightness ?: currentBrightness.get()
+            if (newBrightness <= 0) newBrightness = 100
 
-                currentColor.set(newColor)
-                currentBrightness.set(newBrightness)
-                val scaledColor = newColor.scale(newBrightness)
-                device.setAll(scaledColor)
-            }
+            currentColor.set(newColor)
+            currentBrightness.set(newBrightness)
+            val scaledColor = newColor.scale(newBrightness)
+            device.setAll(scaledColor)
         }
     }
 
-    private fun manageEffect(effect: String) {
-        currentEffect.set(effect)
-        // TODO?
+    override fun exec(effect: String): CompletableFuture<Void> {
+        TODO("Not yet implemented")
     }
 
     override fun current(): LightState = LightState(
@@ -60,6 +58,4 @@ class PimoroniShimController(private val device: PimoroniLEDShim) : LightControl
         color = currentColor.get().toLightColor(),
         effect = currentEffect.get()
     )
-
-    override fun controllerIcon() = "mdi:led-strip"
 }

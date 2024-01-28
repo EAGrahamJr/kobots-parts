@@ -4,6 +4,7 @@ import crackers.kobots.devices.lighting.PixelBuf
 import crackers.kobots.devices.lighting.WS2811
 import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import java.awt.Color
+import java.util.concurrent.CompletableFuture
 import kotlin.math.roundToInt
 
 /**
@@ -11,6 +12,8 @@ import kotlin.math.roundToInt
  */
 class SinglePixelLightController(private val theStrand: PixelBuf, private val index: Int) : LightController {
     private var lastColor: WS2811.PixelColor = WS2811.PixelColor(Color.WHITE, brightness = 0.5f)
+    override val lightEffects: List<String>? = null
+    override val controllerIcon = "mdi:led-strip"
 
     // note: brightness for the kobot lights is 0-100
     override fun current(): LightState {
@@ -36,5 +39,25 @@ class SinglePixelLightController(private val theStrand: PixelBuf, private val in
         val color = command.color ?: currentColor.color
         lastColor = WS2811.PixelColor(color, brightness = cb)
         theStrand[index] = lastColor
+    }
+
+    override fun exec(effect: String): CompletableFuture<Void> {
+        TODO("Not yet implemented")
+    }
+}
+
+class PixelBufController(private val theStrand: PixelBuf) : LightController {
+    override val lightEffects: List<String>? = null
+    override val controllerIcon = "mdi:led-strip"
+    override fun set(command: LightCommand) {
+        TODO("Not yet implemented")
+    }
+
+    override fun current(): LightState {
+        TODO("Not yet implemented")
+    }
+
+    override fun exec(effect: String): CompletableFuture<Void> {
+        TODO("Not yet implemented")
     }
 }

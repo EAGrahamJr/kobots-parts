@@ -2,7 +2,7 @@ package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.app.AppCommon.mqttClient
 import crackers.kobots.mqtt.KobotsMQTT
-import crackers.kobots.mqtt.homeassistant.KobotDevice.Companion.KOBOTS_MQTT
+import crackers.kobots.mqtt.homeassistant.KobotHAEntity.Companion.KOBOTS_MQTT
 import crackers.kobots.parts.app.KobotSleep
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
@@ -22,7 +22,7 @@ data class DeviceIdentifier @JvmOverloads constructor(
 /**
  * Defines the "device" for MQTT discovery and state messages.
  */
-interface KobotDevice : Comparable<KobotDevice> {
+interface KobotHAEntity : Comparable<KobotHAEntity> {
     /**
      * The unique ID of the device. **NOTE** If this is _not_ unique across all devices, then
      * HomeAssistant will throw an error on discovery, but it won't be seen here.
@@ -56,7 +56,7 @@ interface KobotDevice : Comparable<KobotDevice> {
      */
     fun currentState(): JSONObject
 
-    override fun compareTo(other: KobotDevice): Int = uniqueId.compareTo(other.uniqueId)
+    override fun compareTo(other: KobotHAEntity): Int = uniqueId.compareTo(other.uniqueId)
 
     companion object {
         const val KOBOTS_MQTT = "kobots_ha"
@@ -64,17 +64,23 @@ interface KobotDevice : Comparable<KobotDevice> {
 }
 
 /**
- * Abstraction for common attributes and methods for all Kobot devices for integration with Home Assistant via MQTT.
+ * Abstraction for common attributes and methods for all Kobot entities for integration with Home Assistant via MQTT.
  * Because it's part of this package, it assumes usage of the [AppCommon.mqttClient] singleton.
  *
- * Devices may be removed from HomeAssistant at any time, so the discovery message is sent on every connection. Birth
- * and last-will messages are **not** used because the client can be used for other things besides HA.
+ * Devices and entities may be removed from HomeAssistant at any time, so the discovery message is sent on every
+ * connection. Birth and last-will messages, and retention flags are **not** used because the client can be used for
+ * other things besides HA and it assumes these devices are "smart enough" to
  *
  * **Note** the [uniqueId] and [name] properties are the name of the _entity_, not the device (see
  * [DeviceIdentifier] -- a device may have several entities). The _entityId_ in Home Assistant will be constructed from
- * the category, uniqueId, and name -- e.g. `light.sparkle_night_light`.
+ * the component, uniqueId, and name -- e.g. `light.sparkle_night_light`.
  */
-abstract class AbstractKobotDevice(final override val uniqueId: String, final override val name: String) : KobotDevice {
+abstract class AbstractKobotEntity(
+    final override val uniqueId: String,
+    final override val name: String,
+    final override val deviceIdentifier: DeviceIdentifier
+) :
+    KobotHAEntity {
     init {
         require(uniqueId.isNotBlank()) { "'uniqeId' must not be blank." }
         require(name.isNotBlank()) { "'name' must not be blank." }
@@ -133,6 +139,7 @@ abstract class AbstractKobotDevice(final override val uniqueId: String, final ov
      */
     protected open fun redoConnection() {
         connected.set(true)
+        // TODO am I just getting lucky here? should use retain?
         sendDiscovery()
         logger.info("Waiting 2 seconds for discovery to be processed")
         KobotSleep.seconds(2)
@@ -157,7 +164,9 @@ abstract class AbstractKobotDevice(final override val uniqueId: String, final ov
     }
 }
 
-abstract class CommandDevice(uniqueId: String, name: String) : AbstractKobotDevice(uniqueId, name) {
+abstract class CommandEntity(uniqueId: String, name: String, deviceIdentifier: DeviceIdentifier) :
+    AbstractKobotEntity(uniqueId, name, deviceIdentifier) {
+
     /**
      * The MQTT topic for the device's command (receive).
      */
@@ -166,15 +175,15 @@ abstract class CommandDevice(uniqueId: String, name: String) : AbstractKobotDevi
     /**
      * Handle the MQTT command message for this device.
      */
-    abstract fun handleCommand(payload: JSONObject)
+    abstract fun handleCommand(payload: String)
 
     /**
      * Over-ride the base class to add a subscription to handle commands.
      */
     override fun start() {
         super.start()
-        // subscribe to the command topic (expecting JSON payload)
-        mqttClient.subscribeJSON(commandTopic, ::handleCommand)
+        // subscribe to the command topic (expecting string payload, possibly JSON)
+        mqttClient.subscribe(commandTopic, ::handleCommand)
     }
 
     override fun discovery() = super.discovery().put("command_topic", commandTopic)

@@ -235,19 +235,20 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     /**
      * Publish a JSON message to the topic. All errors are only logged, keeping in line with a QoS of 0.
      */
-    fun publish(topic: String, payload: JSONObject) = publish(topic, payload.toString())
+    fun publish(topic: String, payload: JSONObject, retain: Boolean = false) =
+        publish(topic, payload.toString(), retain)
 
     /**
      * Publish a String message to the topic. All errors are only logged, keeping in line with a QoS of 0.
      */
-    fun publish(topic: String, payload: String) = publish(topic, payload.toByteArray())
+    fun publish(topic: String, payload: String, retain: Boolean = false) = publish(topic, payload.toByteArray(), retain)
 
     /**
      * Publish a message to the topic. All errors are only logged, keeping in line with a QoS of 0.
      */
-    fun publish(topic: String, payload: ByteArray) {
+    fun publish(topic: String, payload: ByteArray, retain: Boolean = false) {
         try {
-            mqttClient.publish(topic, MqttMessage(payload)).waitForCompletion()
+            mqttClient.publish(topic, MqttMessage(payload).apply { isRetained = retain }).waitForCompletion()
         } catch (t: Throwable) {
             logger.error("Publisher error", t)
         }

@@ -12,8 +12,9 @@ abstract class KobotSensor<M : Enum<M>>(
     uniqueId: String,
     name: String,
     val expires: Duration,
-    val deviceClass: M
-) : AbstractKobotDevice(uniqueId, name) {
+    val deviceClass: M,
+    deviceIdentifier: DeviceIdentifier
+) : AbstractKobotEntity(uniqueId, name, deviceIdentifier) {
 
     override fun currentState() = JSONObject()
 
@@ -28,7 +29,7 @@ abstract class KobotSensor<M : Enum<M>>(
         if (expires > 1.seconds) put("expire_after", expires.inWholeSeconds)
         if (deviceClass.name != "NONE") {
             remove("icon") // let the device class decide the icon
-            put("device_class", deviceClass.name)
+            put("device_class", deviceClass.name.lowercase())
         }
         this
     }
@@ -44,8 +45,8 @@ open class KobotBinarySensor(
     deviceClass: BinaryDevice = BinaryDevice.NONE,
     expires: Duration = Duration.ZERO,
     val offDelay: Duration = Duration.ZERO,
-    override val deviceIdentifier: DeviceIdentifier = DEFAULT_IDENTIFIER
-) : KobotSensor<BinaryDevice>(uniqueId, name, expires, deviceClass) {
+    deviceIdentifier: DeviceIdentifier = DEFAULT_IDENTIFIER
+) : KobotSensor<BinaryDevice>(uniqueId, name, expires, deviceClass, deviceIdentifier) {
 
     // do not allow over-rides: this is required for proper integration
     final override val component = "binary_sensor"
@@ -53,7 +54,6 @@ open class KobotBinarySensor(
     override fun discovery() = super.discovery().apply {
         if (offDelay > 1.seconds) put("off_delay", offDelay.inWholeSeconds)
     }
-
 
     var currentState: Boolean
         get() = sensorState.get() == "ON"
@@ -67,34 +67,34 @@ open class KobotBinarySensor(
 
         enum class BinaryDevice {
             NONE,
-            battery,
-            battery_charging,
-            carbon_monoxide,
-            cold,
-            connectivity,
-            door,
-            garage_door,
-            gas,
-            heat,
-            light,
-            lock,
-            moisture,
-            motion,
-            moving,
-            occupancy,
-            opening,
-            plug,
-            power,
-            presence,
-            problem,
-            running,
-            safety,
-            smoke,
-            sound,
-            tamper,
-            update,
-            vibration,
-            window
+            BATTERY,
+            BATTERY_CHARGING,
+            CARBON_MONOXIDE,
+            COLD,
+            CONNECTIVITY,
+            DOOR,
+            GARAGE_DOOR,
+            GAS,
+            HEAT,
+            LIGHT,
+            LOCK,
+            MOISTURE,
+            MOTION,
+            MOVING,
+            OCCUPANCY,
+            OPENING,
+            PLUG,
+            POWER,
+            PRESENCE,
+            PROBLEM,
+            RUNNING,
+            SAFETY,
+            SMOKE,
+            SOUND,
+            TAMPER,
+            UPDATE,
+            VIBRATION,
+            WINDOW
         }
     }
 }
@@ -114,12 +114,11 @@ open class KobotAnalogSensor(
     val stateClass: StateClass = StateClass.NONE,
     val unitOfMeasurement: String? = null,
     val suggestedPrecision: Int? = null,
-    override val deviceIdentifier: DeviceIdentifier = DEFAULT_IDENTIFIER
-) : KobotSensor<AnalogDevice>(uniqueId, name, expires, deviceClass) {
+    deviceIdentifier: DeviceIdentifier = DEFAULT_IDENTIFIER
+) : KobotSensor<AnalogDevice>(uniqueId, name, expires, deviceClass, deviceIdentifier) {
 
     // do not allow over-rides: this is required for proper integration
     final override val component = "sensor"
-
 
     override fun discovery() = super.discovery().apply {
         if (unitOfMeasurement != null) put("unit_of_measurement", unitOfMeasurement)
@@ -138,63 +137,63 @@ open class KobotAnalogSensor(
 
         enum class StateClass {
             NONE,
-            measurement,
-            total,
-            total_increasing
+            MEASUREMENT,
+            TOTAL,
+            TOTAL_INCREASING
         }
 
         enum class AnalogDevice {
             NONE,
-            apparent_power,
-            aqi,
-            atmospheric_pressure,
-            battery,
-            carbon_monoxide,
-            carbon_dioxide,
-            current,
-            data_rate,
-            data_size,
-            date,
-            distance,
-            duration,
-            energy,
-            energy_storage,
-            enum,
-            frequency,
-            gas,
-            humidity,
-            illuminance,
-            irradiance,
-            moisture,
-            monetary,
-            nitrogen_dioxide,
-            nitrogen_monoxide,
-            nitrous_oxide,
-            ozone,
-            ph,
-            pm1,
-            pm10,
-            pm25,
-            power_factor,
-            power,
-            precipitation,
-            precipitation_intensity,
-            pressure,
-            reactive_power,
-            signal_strength,
-            sound_pressure,
-            speed,
-            sulphur_dioxide,
-            temperature,
-            timestamp,
-            volatile_organic_compounds,
-            volatile_organic_compounds_parts,
-            voltage,
-            volume,
-            volume_storage,
-            water,
-            weight,
-            wind_speed
+            APPARENT_POWER,
+            AQI,
+            ATMOSPHERIC_PRESSURE,
+            BATTERY,
+            CARBON_MONOXIDE,
+            CARBON_DIOXIDE,
+            CURRENT,
+            DATA_RATE,
+            DATA_SIZE,
+            DATE,
+            DISTANCE,
+            DURATION,
+            ENERGY,
+            ENERGY_STORAGE,
+            ENUM,
+            FREQUENCY,
+            GAS,
+            HUMIDITY,
+            ILLUMINANCE,
+            IRRADIANCE,
+            MOISTURE,
+            MONETARY,
+            NITROGEN_DIOXIDE,
+            NITROGEN_MONOXIDE,
+            NITROUS_OXIDE,
+            OZONE,
+            PH,
+            PM1,
+            PM10,
+            PM25,
+            POWER_FACTOR,
+            POWER,
+            PRECIPITATION,
+            PRECIPITATION_INTENSITY,
+            PRESSURE,
+            REACTIVE_POWER,
+            SIGNAL_STRENGTH,
+            SOUND_PRESSURE,
+            SPEED,
+            SULPHUR_DIOXIDE,
+            TEMPERATURE,
+            TIMESTAMP,
+            VOLATILE_ORGANIC_COMPOUNDS,
+            VOLATILE_ORGANIC_COMPOUNDS_PARTS,
+            VOLTAGE,
+            VOLUME,
+            VOLUME_STORAGE,
+            WATER,
+            WEIGHT,
+            WIND_SPEED
         }
     }
 }
