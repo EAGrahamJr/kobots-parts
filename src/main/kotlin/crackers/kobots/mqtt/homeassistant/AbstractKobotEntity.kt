@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 data class DeviceIdentifier @JvmOverloads constructor(
     val manufacturer: String,
     val model: String,
-    val icon: String = "mdi:devices",
     val identifer: String = InetAddress.getLocalHost().hostName
 )
 
@@ -25,7 +24,7 @@ data class DeviceIdentifier @JvmOverloads constructor(
 interface KobotHAEntity : Comparable<KobotHAEntity> {
     /**
      * The unique ID of the device. **NOTE** If this is _not_ unique across all devices, then
-     * HomeAssistant will throw an error on discovery, but it won't be seen here.
+     * HomeAssistant will throw an error on discovery, but it wont be seen here.
      */
     val uniqueId: String
 
@@ -45,16 +44,21 @@ interface KobotHAEntity : Comparable<KobotHAEntity> {
     val deviceIdentifier: DeviceIdentifier
 
     /**
+     * The icon HA will use to display this entity.
+     */
+    val icon: String
+
+    /**
      * Generate the MQTT discovery message for this device.
      *
-     * **NOTE** This should be modified by each entity for it's special cases.
+     * **NOTE** This should be modified by each entity for its special cases.
      */
     fun discovery(): JSONObject
 
     /**
      * Generate the MQTT state message for this device.
      */
-    fun currentState(): JSONObject
+    fun currentState(): String
 
     override fun compareTo(other: KobotHAEntity): Int = uniqueId.compareTo(other.uniqueId)
 
@@ -65,7 +69,7 @@ interface KobotHAEntity : Comparable<KobotHAEntity> {
 
 /**
  * Abstraction for common attributes and methods for all Kobot entities for integration with Home Assistant via MQTT.
- * Because it's part of this package, it assumes usage of the [AppCommon.mqttClient] singleton.
+ * Because its part of this package, it assumes usage of the [AppCommon.mqttClient] singleton.
  *
  * Devices and entities may be removed from HomeAssistant at any time, so the discovery message is sent on every
  * connection. Birth and last-will messages, and retention flags are **not** used because the client can be used for
@@ -79,11 +83,10 @@ abstract class AbstractKobotEntity(
     final override val uniqueId: String,
     final override val name: String,
     final override val deviceIdentifier: DeviceIdentifier
-) :
-    KobotHAEntity {
+) : KobotHAEntity {
     init {
-        require(uniqueId.isNotBlank()) { "'uniqeId' must not be blank." }
-        require(name.isNotBlank()) { "'name' must not be blank." }
+        require(uniqueId.isNotBlank()) { "uniqeId must not be blank." }
+        require(name.isNotBlank()) { "name must not be blank." }
     }
 
     private val logger = LoggerFactory.getLogger(javaClass.simpleName)
@@ -91,10 +94,12 @@ abstract class AbstractKobotEntity(
     protected val homeassistantAvailable: Boolean
         get() = connected.get()
 
+    override val icon: String = "mdi:devices"
+
     /**
-     * The MQTT topic for the device's state (send).
+     * The MQTT topic for the devices state (send). Allows for over-rides.
      */
-    val statusTopic = "$KOBOTS_MQTT/$uniqueId/state"
+    open val statusTopic = "$KOBOTS_MQTT/$uniqueId/state"
 
     /**
      * A generic configuration for the device, which can be used to generate the discovery message
@@ -102,15 +107,13 @@ abstract class AbstractKobotEntity(
      * so just dump it on the child class to figure it out.
      */
     override fun discovery() = JSONObject().apply {
-        val deviceId = JSONObject()
-            .put("identifiers", listOf(uniqueId, deviceIdentifier.identifer))
-            .put("name", deviceIdentifier.identifer)
-            .put("model", deviceIdentifier.model)
+        val deviceId = JSONObject().put("identifiers", listOf(uniqueId, deviceIdentifier.identifer))
+            .put("name", deviceIdentifier.identifer).put("model", deviceIdentifier.model)
             .put("manufacturer", deviceIdentifier.manufacturer)
 
         put("device", deviceId)
         put("entity_category", "config")
-        put("icon", deviceIdentifier.icon)
+        put("icon", icon)
         put("name", name)
         put("schema", "json")
         put("state_topic", statusTopic)
@@ -159,7 +162,7 @@ abstract class AbstractKobotEntity(
     /**
      * Send the current state message for this device.
      */
-    protected open fun sendCurrentState(state: JSONObject = currentState()) {
+    protected open fun sendCurrentState(state: String = currentState()) {
         if (homeassistantAvailable) mqttClient[statusTopic] = state
     }
 }
@@ -168,9 +171,9 @@ abstract class CommandEntity(uniqueId: String, name: String, deviceIdentifier: D
     AbstractKobotEntity(uniqueId, name, deviceIdentifier) {
 
     /**
-     * The MQTT topic for the device's command (receive).
+     * The MQTT topic for the devices command (receive). Allows over-rides.
      */
-    val commandTopic = "$KOBOTS_MQTT/$uniqueId/set"
+    open val commandTopic = "$KOBOTS_MQTT/$uniqueId/set"
 
     /**
      * Handle the MQTT command message for this device.
@@ -178,13 +181,37 @@ abstract class CommandEntity(uniqueId: String, name: String, deviceIdentifier: D
     abstract fun handleCommand(payload: String)
 
     /**
-     * Over-ride the base class to add a subscription to handle commands.
+     * Over-ride the base class to add a subscription to handle commands. This also "automatically" sends a current
+     * state once the handler has finished.
      */
     override fun start() {
         super.start()
         // subscribe to the command topic (expecting string payload, possibly JSON)
-        mqttClient.subscribe(commandTopic, ::handleCommand)
+        mqttClient.subscribe(commandTopic) { payload ->
+            handleCommand(payload)
+            sendCurrentState()
+        }
     }
 
     override fun discovery() = super.discovery().put("command_topic", commandTopic)
+}
+
+/**
+ * Device classes are "things" HA knows about that can handle values with units.
+ */
+interface DeviceClass {
+    val name: String
+
+    /**
+     * Modifies the given JSON object by removing the "icon" and replacing with the "device type" if this type is not
+     * NONE.
+     */
+    fun addDiscovery(json: JSONObject, unitOfMeasurement: String? = null) {
+        if (this.name != "NONE") {
+            json.remove("icon")
+            json.put("device_class", this.name.lowercase())
+
+            if (unitOfMeasurement != null) json.put("unit_of_measurement", unitOfMeasurement)
+        }
+    }
 }

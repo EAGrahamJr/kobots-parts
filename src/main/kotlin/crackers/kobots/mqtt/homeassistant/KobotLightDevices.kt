@@ -105,11 +105,13 @@ open class KobotLight(
     uniqueId: String,
     private val controller: LightController,
     name: String,
-    deviceIdentifier: DeviceIdentifier = defaultDeviceIdentifier(controller)
+    deviceIdentifier: DeviceIdentifier
 ) :
     CommandEntity(uniqueId, name, deviceIdentifier) {
 
     final override val component: String = "light"
+    override val icon = controller.controllerIcon
+
     override fun discovery() = super.discovery().apply {
         put("brightness", true)
         controller.lightEffects?.let {
@@ -118,7 +120,7 @@ open class KobotLight(
         }
     }
 
-    override fun currentState() = controller.current().json()
+    override fun currentState() = controller.current().json().toString()
 
     private val effectFuture = AtomicReference<CompletableFuture<Void>>()
     private var theFuture: CompletableFuture<Void>? // for pretty
@@ -136,15 +138,6 @@ open class KobotLight(
         } else {
             controller set this
         }
-        sendCurrentState()
-    }
-
-    companion object {
-        /**
-         * Creates a default identifier based on the controller.
-         */
-        fun defaultDeviceIdentifier(controller: LightController) =
-            DeviceIdentifier("Kobots", controller.javaClass.simpleName, controller.controllerIcon)
     }
 }
 
@@ -155,9 +148,9 @@ open class KobotLight(
  */
 open class KobotRGBLight(
     uniqueId: String,
-    controller: LightController,
+    val controller: LightController,
     name: String,
-    deviceIdentifier: DeviceIdentifier = defaultDeviceIdentifier(controller)
+    deviceIdentifier: DeviceIdentifier
 ) : KobotLight(uniqueId, controller, name, deviceIdentifier) {
 
     override fun discovery() = super.discovery().apply {

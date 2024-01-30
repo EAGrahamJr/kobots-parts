@@ -2,7 +2,6 @@ package crackers.kobots.mqtt.homeassistant
 
 import com.diozero.api.PwmOutputDevice
 import crackers.kobots.devices.set
-import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import java.util.concurrent.CompletableFuture
 import kotlin.math.roundToInt
 
@@ -32,34 +31,6 @@ interface LightController {
     val controllerIcon: String
 
     val lightEffects: List<String>?
-}
-
-/**
- * Stubbed out implementation of [LightController] that does nothing. This is useful for testing, but not much else.
- */
-val NOOP_CONTROLLER = object : LightController {
-    private var current: LightState = LightState()
-
-    override fun set(command: LightCommand) {
-        println("LightState: $command")
-        current = LightState(
-            state = command.state ?: false,
-            brightness = command.brightness ?: current.brightness,
-            color = command.color?.toLightColor() ?: current.color,
-            effect = command.effect ?: current.effect
-        )
-    }
-
-    override fun exec(effect: String): CompletableFuture<Void> {
-        current = current.copy(effect = effect)
-        return CompletableFuture<Void>().apply {
-            complete(null)
-        }
-    }
-
-    override fun current(): LightState = current
-    override val controllerIcon = ""
-    override val lightEffects = listOf("effect1", "effect2")
 }
 
 /**
@@ -93,6 +64,5 @@ class BasicLightController(val device: PwmOutputDevice) : LightController {
         brightness = (device.value * 100f).roundToInt(),
         effect = currentEffect
     )
-
-    override val controllerIcon = "mdi:light"
+    override val controllerIcon = "mdi:lamp"
 }
