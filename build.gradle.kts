@@ -94,6 +94,16 @@ tasks {
             logger.warn(">>> Dependencies size: ${depSize / 1024} KB")
         }
     }
+
+    create("pushit") {
+        doLast {
+            val v = version
+            println("$v")
+            exec {
+                commandLine("git push --atomic origin main $v".split(" "))
+            }
+        }
+    }
 }
 
 defaultTasks("clean", "build", "dokkaJavadocJar", "libraryDistribution")
