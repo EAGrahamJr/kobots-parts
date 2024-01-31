@@ -84,7 +84,7 @@ class RotatorTest : FunSpec(
         test("rotatable with servo") {
             var currentAngle = 43f
             every { mockServo.angle } answers { currentAngle }
-            every { mockServo.setAngle(any()) } answers {
+            every { mockServo.angle = any() } answers {
                 currentAngle = args[0] as Float
             }
             val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180))
@@ -93,7 +93,7 @@ class RotatorTest : FunSpec(
                 // just count things
             }
             verify(exactly = 131) {
-                mockServo.setAngle(any())
+                mockServo.angle = any()
             }
             currentAngle shouldBe 174f
         }
@@ -105,7 +105,7 @@ class RotatorTest : FunSpec(
         test("rotatable with servo reversed") {
             var currentAngle = 162f
             every { mockServo.angle } answers { currentAngle }
-            every { mockServo.setAngle(any()) } answers {
+            every { mockServo.angle = any() } answers {
                 currentAngle = args[0] as Float
             }
             val rotatable = ServoRotator(mockServo, IntRange(-10, 90), IntRange(180, 0))
@@ -114,7 +114,7 @@ class RotatorTest : FunSpec(
                 // just count things
             }
             verify(exactly = 80) {
-                mockServo.setAngle(any())
+                mockServo.angle = any()
             }
             currentAngle shouldBe 82f
         }
@@ -127,7 +127,7 @@ class RotatorTest : FunSpec(
         test("rotatable with servo delta") {
             var currentAngle = 60f
             every { mockServo.angle } answers { currentAngle }
-            every { mockServo.setAngle(any()) } answers {
+            every { mockServo.angle = any() } answers {
                 currentAngle = args[0] as Float
             }
             val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180), 5)
@@ -136,7 +136,7 @@ class RotatorTest : FunSpec(
                 // just count things
             }
             verify(exactly = 0) {
-                mockServo.setAngle(any())
+                mockServo.angle = any()
             }
             currentAngle shouldBe 60f
         }

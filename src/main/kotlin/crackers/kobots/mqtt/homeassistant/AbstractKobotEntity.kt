@@ -91,8 +91,9 @@ abstract class AbstractKobotEntity(
 
     private val logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val connected = AtomicBoolean(false)
+    private val deleted = AtomicBoolean(false)
     protected val homeassistantAvailable: Boolean
-        get() = connected.get()
+        get() = connected.get() && !deleted.get()
 
     override val icon: String = "mdi:devices"
 
@@ -150,7 +151,7 @@ abstract class AbstractKobotEntity(
     }
 
     /**
-     * Send the discovery message for this device.
+     * Send the discovery message for this device, if HA is avaliable.
      */
     protected open fun sendDiscovery(discoveryPayload: JSONObject = discovery()) {
         if (homeassistantAvailable) {
@@ -160,10 +161,22 @@ abstract class AbstractKobotEntity(
     }
 
     /**
-     * Send the current state message for this device.
+     * Send the current state message for this device, if HA is avaliable.
      */
     protected open fun sendCurrentState(state: String = currentState()) {
         if (homeassistantAvailable) mqttClient[statusTopic] = state
+    }
+
+    /**
+     * Removes the entity from HA: sends an empty configuration, if HA is avaliable. Note that this will **disable**
+     * this entity from further use, although any topic subscriptions are still active.
+     */
+    open fun remove() {
+        if (homeassistantAvailable) {
+            logger.warn("Removing device $uniqueId")
+            mqttClient["homeassistant/$component/$uniqueId/config"] = ""
+        }
+        deleted.set(true)
     }
 }
 

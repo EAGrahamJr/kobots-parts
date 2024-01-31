@@ -112,7 +112,8 @@ private fun <T : KobotsMessage> getPublisher(topic: String) =
 
 // specific messages ==================================================================================================
 const val STOP_NOW = "Emergency Stop"
-class EmergencyStop() : KobotsAction {
+
+class EmergencyStop : KobotsAction {
     override val interruptable: Boolean = false
     val name = STOP_NOW
 }

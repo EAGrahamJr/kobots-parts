@@ -203,6 +203,23 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
         subscribe(topic) { resp: String -> handler(JSONObject(resp)) }
 
     /**
+     * Unsubscribe from a topic. **NOTE** This removes _all_ listeners for the given topic.
+     */
+    fun unsubscribe(topic: String) {
+        mqttClient.unsubscribe(topic).waitForCompletion()
+        subscribers.remove(topic)
+    }
+
+    /**
+     * Unsubscribe from _all_ topics.
+     */
+    fun unsubscribe() {
+        val topics = subscribers.keys
+        topics.forEach { unsubscribe(it) }
+        subscribers.clear()
+    }
+
+    /**
      * Add a listener to a topic.
      */
     private fun addListener(topic: String, listener: (String) -> Unit) {

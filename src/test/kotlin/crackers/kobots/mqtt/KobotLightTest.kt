@@ -1,10 +1,7 @@
 package crackers.kobots.mqtt
 
 import crackers.kobots.app.AppCommon.mqttClient
-import crackers.kobots.mqtt.homeassistant.KobotLight
-import crackers.kobots.mqtt.homeassistant.LightColor
-import crackers.kobots.mqtt.homeassistant.LightController
-import crackers.kobots.mqtt.homeassistant.LightState
+import crackers.kobots.mqtt.homeassistant.*
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -65,7 +62,7 @@ private fun testGuts(): FunSpec.() -> Unit = {
             initialStatusReceivedLatch.countDown()
         }
 
-        val light = KobotLight("test_light", controller, "Test Light", listOf("effect1", "effect2"))
+        val light = KobotLight("test_light", controller, "Test Light", DeviceIdentifier("foo", "foo"))
         light.start()
 
         discoveryReceived.await(1, TimeUnit.SECONDS) shouldBe true
@@ -87,8 +84,7 @@ private fun testJSONObjects(expected: JSONObject, actual: JSONObject) {
     expected.keySet() shouldBe actual.keySet()
     expected.keySet().forEach { key ->
         actual.has(key) shouldBe true
-        val expectedSchemaValue = expected.get(key)
-        when (expectedSchemaValue) {
+        when (val expectedSchemaValue = expected.get(key)) {
             is JSONArray -> {
                 // compare the arrays as sets
                 val expectedSet = expectedSchemaValue.toList().toSet()
