@@ -3,17 +3,28 @@ package crackers.kobots.mqtt.homeassistant
 import crackers.kobots.devices.lighting.PixelBuf
 import crackers.kobots.devices.lighting.WS2811
 import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
+import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 
 /**
- * Simple HomeAssistant "light" that controls a single pixel on a 1->n PixelBuf strand.
+ * Simple HomeAssistant "light" that controls a single pixel on a 1->n `PixelBuf` strand (e.g. a WS28xx LED). Note
+ * that the effects **must** be in the context of a `PixelBuf` target.
  */
-class SinglePixelLightController(private val theStrand: PixelBuf, private val index: Int) : LightController {
+class SinglePixelLightController(
+    private val theStrand: PixelBuf,
+    private val index: Int,
+    private val effects: Map<String, PixelBuf.(index: Int) -> Any>? = null
+) : LightController {
+
+    private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
+
     private var lastColor: WS2811.PixelColor = WS2811.PixelColor(Color.WHITE, brightness = 0.5f)
-    override val lightEffects: List<String>? = null
-    override val controllerIcon = "mdi:led-strip"
+    override val lightEffects = effects?.keys?.sorted()
+    override val controllerIcon = "mdi:lightbulb"
+    private val currentEffect = AtomicReference<String>()
 
     // note: brightness for the kobot lights is 0-100
     override fun current(): LightState {
@@ -21,12 +32,13 @@ class SinglePixelLightController(private val theStrand: PixelBuf, private val in
         return LightState(
             state = state,
             brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
-            color = lastColor.color.toLightColor()
+            color = lastColor.color.toLightColor(),
+            effect = currentEffect.get()
         )
     }
 
     override fun set(command: LightCommand) {
-        if (command.state == false) {
+        if (!command.state) {
             theStrand[index] = Color.BLACK
             return
         }
@@ -41,23 +53,70 @@ class SinglePixelLightController(private val theStrand: PixelBuf, private val in
         theStrand[index] = lastColor
     }
 
-    override fun exec(effect: String): CompletableFuture<Void> {
-        TODO("Not yet implemented")
+    override fun exec(effect: String) = CompletableFuture.runAsync {
+        try {
+            effects?.get(effect)?.invoke(theStrand, index)?.also { currentEffect.set(effect) }
+        } catch (t: Throwable) {
+            logger.error("Error executing effect $effect", t)
+        }
+    }.whenComplete { _, t ->
+        currentEffect.set(null)
     }
 }
 
-class PixelBufController(private val theStrand: PixelBuf) : LightController {
-    override val lightEffects: List<String>? = null
+/**
+ * Controls a full "strand" of `PixelBuf` (e.g. WS28xx LEDs)
+ */
+class PixelBufController(
+    private val theStrand: PixelBuf,
+    private val effects: Map<String, PixelBuf.() -> Any>? = null
+) : LightController {
+    private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
+    override val lightEffects = effects?.keys?.sorted()
     override val controllerIcon = "mdi:led-strip"
+
+    private var lastColor: WS2811.PixelColor = WS2811.PixelColor(Color.WHITE, brightness = 0.5f)
+    private val currentEffect = AtomicReference<String>()
+
+    /**
+     * Finds the first non-black color or the first pixel.
+     */
+    private fun currentColor() = theStrand.get().find { it.color != Color.BLACK } ?: theStrand[0]
+
     override fun set(command: LightCommand) {
-        TODO("Not yet implemented")
+        // just black it out, do not save this "color"
+        if (!command.state) {
+            theStrand fill Color.BLACK
+            return
+        }
+
+        // need to be able to "resume" the last color set if it wasn't turned off
+        val currentColor = currentColor().let { if (it.color == Color.BLACK) lastColor else it }
+        val color = command.color ?: currentColor.color
+        // if there's a brightness, otherwise "resume" again
+        val cb = command.brightness?.let { it / 100f } ?: currentColor.brightness
+        // save it, send it
+        lastColor = WS2811.PixelColor(color, brightness = cb)
+        theStrand fill lastColor
     }
 
     override fun current(): LightState {
-        TODO("Not yet implemented")
+        val state = theStrand.get().find { it.color != Color.BLACK }?.let { true } ?: false
+        return LightState(
+            state = state,
+            brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
+            color = lastColor.color.toLightColor(),
+            effect = currentEffect.get()
+        )
     }
 
-    override fun exec(effect: String): CompletableFuture<Void> {
-        TODO("Not yet implemented")
+    override fun exec(effect: String) = CompletableFuture.runAsync {
+        try {
+            effects?.get(effect)?.invoke(theStrand)?.also { currentEffect.set(effect) }
+        } catch (t: Throwable) {
+            logger.error("Error executing effect $effect", t)
+        }
+    }.whenComplete { _, t ->
+        currentEffect.set(null)
     }
 }

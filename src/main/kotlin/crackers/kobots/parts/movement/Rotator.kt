@@ -112,8 +112,17 @@ class BasicStepperRotator(
     reversed: Boolean = false
 ) : Rotator {
 
+    private val maxSteps: Float
+
+    private val degreesToSteps: Map<Int, Int>
     init {
         require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero." }
+        maxSteps = theStepper.stepsPerRotation / gearRatio
+
+        // calculate how many steps off of "zero" each degree is
+        degreesToSteps = (0..359).map {
+            it to (maxSteps * it / 360).roundToInt()
+        }.toMap()
     }
 
     private val forwardDirection = if (reversed) BACKWARD else FORWARD
@@ -121,13 +130,12 @@ class BasicStepperRotator(
 
     fun release() = theStepper.release()
 
-    private val maxSteps = theStepper.stepsPerRotation / gearRatio
     private var stepsLocation: Int = 0
 
     override fun current(): Int = (360 * stepsLocation / maxSteps).roundToInt()
 
     override fun rotateTo(angle: Int): Boolean {
-        val destinationSteps = (maxSteps * angle / 360).roundToInt()
+        val destinationSteps = degreesToSteps[abs(angle % 360)]!! * (if (angle < 0) -1 else 1)
         if (destinationSteps == stepsLocation) return true
 
         // move towards the destination
@@ -140,6 +148,13 @@ class BasicStepperRotator(
         }
         // are we there yet?
         return destinationSteps == stepsLocation
+    }
+
+    /**
+     * TODO replace this with a translation table or something to account for "drift" (probably due to all the rounding)
+     */
+    fun reset() {
+        stepsLocation = 0
     }
 }
 

@@ -6,7 +6,7 @@ import org.json.JSONObject
  * A "select" entity allows for a device to react to explicit "commands". This conforms to the
  * [MQTT Select](https://www.home-assistant.io/integrations/select.mqtt)
  */
-class KobotSelect(
+class KobotSelectEntity(
     val selectHandler: SelectHandler,
     uniqueId: String,
     name: String,

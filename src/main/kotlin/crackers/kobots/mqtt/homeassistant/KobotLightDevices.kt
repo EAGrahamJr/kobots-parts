@@ -70,29 +70,31 @@ data class LightState(
  * ```
  */
 data class LightCommand(
-    val state: Boolean?,
+    val state: Boolean,
     val brightness: Int?,
     val color: Color?,
     val effect: String?
 ) {
     companion object {
         fun JSONObject.commandFrom(): LightCommand = with(this) {
-            val state = optString("state", null)?.let { it == "ON" }
+            var state = optString("state", null)?.let { it == "ON" } ?: false
             val effect = optString("effect", null)
 
             // brightness is 0-255, so translate to 0-100
-            val brightness = optInteger("brightness")?.let { it * 100f / 255f }?.roundToInt()
+            val brightness = takeIf { has("brightness") }?.let { getInt("brightness") * 100f / 255f }?.roundToInt()
 
             // this is in mireds, so we need to convert to Kelvin
-            val colorTemp = optInteger("color_temp")?.let { 1000000f / it }?.roundToInt()
+            val colorTemp = takeIf { has("color_temp") }?.let { 1000000f / getInt("color_temp") }?.roundToInt()
 
             val color = optJSONObject("color")?.let {
                 Color(it.optInt("r"), it.optInt("g"), it.optInt("b"))
             } ?: colorTemp?.kelvinToRGB()
+
+            // set state regardless
+            if (brightness != null || color != null) state = true
+
             LightCommand(state, brightness, color, effect)
         }
-
-        private fun JSONObject.optInteger(key: String) = optIntegerObject(key, null)
     }
 }
 

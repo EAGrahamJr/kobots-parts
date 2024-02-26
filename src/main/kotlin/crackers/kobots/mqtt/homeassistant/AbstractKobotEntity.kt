@@ -161,9 +161,10 @@ abstract class AbstractKobotEntity(
     }
 
     /**
-     * Send the current state message for this device, if HA is avaliable.
+     * Send the current state message for this device, if HA is avaliable. This is a _public_ method so that it
+     * **can** be triggered externally, such as in the case of effects running.
      */
-    protected open fun sendCurrentState(state: String = currentState()) {
+    open fun sendCurrentState(state: String = currentState()) {
         if (homeassistantAvailable) mqttClient[statusTopic] = state
     }
 

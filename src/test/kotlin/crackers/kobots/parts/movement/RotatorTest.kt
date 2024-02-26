@@ -31,114 +31,134 @@ import io.mockk.verify
  */
 class RotatorTest : FunSpec(
     {
-        @MockK
-        lateinit var mockStepper: StepperMotorInterface
+        context("Stepper") {
+            @MockK
+            lateinit var mockStepper: StepperMotorInterface
 
-        @MockK
-        lateinit var mockServo: ServoDevice
+            beforeTest {
+                mockStepper = mockk<StepperMotorInterface>()
+            }
+            /**
+             * Test the rotatable with a stepper motor: the gear ratio is 1:1 and the stepper motor has 200 steps per rotation.
+             * The rotatable is set to move from 0 to 360 degrees, and it's starting position is assumed to be 9 degrees.
+             * The target angle is 83 degrees.
+             */
+            test("max steps < 360, 1:1 gear ratio") {
+                every { mockStepper.stepsPerRotation } answers { 200 }
+                every { mockStepper.step(any()) } answers { }
+                val rotatable = BasicStepperRotator(mockStepper)
 
-        beforeTest {
-            mockStepper = mockk<StepperMotorInterface>()
-            mockServo = mockkClass(ServoDevice::class)
+                while (!rotatable.rotateTo(83)) {
+                    // just count things
+                }
+                verify(exactly = 46) {
+                    mockStepper.step(StepperMotorInterface.Direction.FORWARD)
+                }
+            }
+
+            /**
+             * Test a stepper rotator with a gear ratio of 1:1.11 and the motor has 200 steps per rotation. The rotator is
+             * to be moved 90 degrees in a forward direction. The stepper is currently at 0 degrees.
+             */
+            test("max steps < 360, 1:11:1 gear ratio") {
+                every { mockStepper.stepsPerRotation } answers { 200 }
+                every { mockStepper.step(any()) } answers { }
+                val rotatable = BasicStepperRotator(mockStepper, 1.11f)
+
+                while (!rotatable.rotateTo(90)) {
+                    // just count things
+                }
+                verify(exactly = 45) {
+                    mockStepper.step(StepperMotorInterface.Direction.FORWARD)
+                }
+            }
+
+            test("max steps > 360, 1.28:1 gear ratio") {
+                every { mockStepper.stepsPerRotation } answers { 2048 }
+                every { mockStepper.step(any()) } answers { }
+                val rotatable = BasicStepperRotator(mockStepper, 1.28f)
+
+                while (!rotatable.rotateTo(90)) {
+                    // just count things
+                }
+                verify(exactly = 400) {
+                    mockStepper.step(StepperMotorInterface.Direction.FORWARD)
+                }
+            }
         }
 
-        /**
-         * Test the rotatable with a stepper motor: the gear ratio is 1:1 and the stepper motor has 200 steps per rotation.
-         * The rotatable is set to move from 0 to 360 degrees, and it's starting position is assumed to be 9 degrees.
-         * The target angle is 83 degrees.
-         */
-        test("rotatable with stepper") {
-            every { mockStepper.stepsPerRotation } answers { 200 }
-            every { mockStepper.step(any()) } answers { }
-            val rotatable = BasicStepperRotator(mockStepper)
+        context("Servo") {
+            @MockK
+            lateinit var mockServo: ServoDevice
 
-            while (!rotatable.rotateTo(83)) {
-                // just count things
+            beforeTest {
+                mockServo = mockkClass(ServoDevice::class)
             }
-            verify(exactly = 46) {
-                mockStepper.step(StepperMotorInterface.Direction.FORWARD)
-            }
-        }
 
-        /**
-         * Test a stepper rotator with a gear ratio of 1:1.11 and the motor has 200 steps per rotation. The rotator is
-         * to be moved 90 degrees in a forward direction. The stepper is currently at 0 degrees.
-         */
-        test("rotatable with stepper and gear ratio") {
-            every { mockStepper.stepsPerRotation } answers { 200 }
-            every { mockStepper.step(any()) } answers { }
-            val rotatable = BasicStepperRotator(mockStepper, 1.11f)
 
-            while (!rotatable.rotateTo(90)) {
-                // just count things
-            }
-            verify(exactly = 45) {
-                mockStepper.step(StepperMotorInterface.Direction.FORWARD)
-            }
-        }
+            /**
+             * Test a rotatable with a servo motor. The physical range is 0 to 90 degrees and the servo has a range of 0 to 180.
+             * Assume the servo angle is at 43 degrees and the target is 87 physical degrees.
+             */
+            test("rotatable with servo") {
+                var currentAngle = 43f
+                every { mockServo.angle } answers { currentAngle }
+                every { mockServo.angle = any() } answers {
+                    currentAngle = args[0] as Float
+                }
+                val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180))
 
-        /**
-         * Test a rotatable with a servo motor. The physical range is 0 to 90 degrees and the servo has a range of 0 to 180.
-         * Assume the servo angle is at 43 degrees and the target is 87 physical degrees.
-         */
-        test("rotatable with servo") {
-            var currentAngle = 43f
-            every { mockServo.angle } answers { currentAngle }
-            every { mockServo.angle = any() } answers {
-                currentAngle = args[0] as Float
+                while (!rotatable.rotateTo(87)) {
+                    // just count things
+                }
+                verify(exactly = 131) {
+                    mockServo.angle = any()
+                }
+                currentAngle shouldBe 174f
             }
-            val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180))
 
-            while (!rotatable.rotateTo(87)) {
-                // just count things
-            }
-            verify(exactly = 131) {
-                mockServo.angle = any()
-            }
-            currentAngle shouldBe 174f
-        }
+            /**
+             * Test a rotatable with a servo motor. The physical range is -10 to 90 degrees and the servo has a range of
+             * 180 to 0. Assume the servo angle is at 162 degrees and the target is 45 physical degrees.
+             */
+            test("rotatable with servo reversed") {
+                var currentAngle = 162f
+                every { mockServo.angle } answers { currentAngle }
+                every { mockServo.angle = any() } answers {
+                    currentAngle = args[0] as Float
+                }
+                val rotatable = ServoRotator(mockServo, IntRange(-10, 90), IntRange(180, 0))
 
-        /**
-         * Test a rotatable with a servo motor. The physical range is -10 to 90 degrees and the servo has a range of
-         * 180 to 0. Assume the servo angle is at 162 degrees and the target is 45 physical degrees.
-         */
-        test("rotatable with servo reversed") {
-            var currentAngle = 162f
-            every { mockServo.angle } answers { currentAngle }
-            every { mockServo.angle = any() } answers {
-                currentAngle = args[0] as Float
+                while (!rotatable.rotateTo(45)) {
+                    // just count things
+                }
+                verify(exactly = 80) {
+                    mockServo.angle = any()
+                }
+                currentAngle shouldBe 82f
             }
-            val rotatable = ServoRotator(mockServo, IntRange(-10, 90), IntRange(180, 0))
 
-            while (!rotatable.rotateTo(45)) {
-                // just count things
-            }
-            verify(exactly = 80) {
-                mockServo.angle = any()
-            }
-            currentAngle shouldBe 82f
-        }
+            /**
+             * Test a rotatable with a servo motor. The physical range is 0 to 90 and the servo has a range of 0 to 180.
+             * The delta is 5 degrees. The servo is currently at an angle of 60 degrees and the target is 32 degrees.
+             * Verify the servo does not move.
+             */
+            test("rotatable with servo delta") {
+                var currentAngle = 60f
+                every { mockServo.angle } answers { currentAngle }
+                every { mockServo.angle = any() } answers {
+                    currentAngle = args[0] as Float
+                }
+                val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180), 5)
 
-        /**
-         * Test a rotatable with a servo motor. The physical range is 0 to 90 and the servo has a range of 0 to 180.
-         * The delta is 5 degrees. The servo is currently at an angle of 60 degrees and the target is 32 degrees.
-         * Verify the servo does not move.
-         */
-        test("rotatable with servo delta") {
-            var currentAngle = 60f
-            every { mockServo.angle } answers { currentAngle }
-            every { mockServo.angle = any() } answers {
-                currentAngle = args[0] as Float
+                while (!rotatable.rotateTo(32)) {
+                    // just count things
+                }
+                verify(exactly = 0) {
+                    mockServo.angle = any()
+                }
+                currentAngle shouldBe 60f
             }
-            val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180), 5)
-
-            while (!rotatable.rotateTo(32)) {
-                // just count things
-            }
-            verify(exactly = 0) {
-                mockServo.angle = any()
-            }
-            currentAngle shouldBe 60f
         }
     }
 )

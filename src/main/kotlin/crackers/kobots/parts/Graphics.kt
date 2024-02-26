@@ -1,6 +1,7 @@
 package crackers.kobots.parts
 
 import java.awt.Color
+import java.awt.Font
 import java.awt.FontMetrics
 import javax.imageio.ImageIO
 import kotlin.math.ln
@@ -112,3 +113,8 @@ fun FontMetrics.center(text: String, width: Int) = kotlin.math.max((width - stri
  * Load an image.
  */
 fun loadImage(name: String) = ImageIO.read(object {}::class.java.getResourceAsStream(name))
+
+/**
+ * A convenience function to load a custom font from resources.
+ */
+fun loadFont(name: String) = Font.createFont(Font.TRUETYPE_FONT, object {}::class.java.getResourceAsStream(name))

@@ -6,7 +6,7 @@ package crackers.kobots.mqtt.homeassistant
  *
  * There are quite a few UI hints that can be set on these objects; defaults are set in all cases.
  */
-class KobotNumber(
+class KobotNumberEntity(
     val handler: NumberHandler,
     uniqueId: String,
     name: String,
