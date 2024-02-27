@@ -32,13 +32,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: "temurin"
       # plugins
       - name: Checkout and build plugins
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: EAGrahamJr/gradle-scripts
           path: gradle-scripts
@@ -47,19 +47,19 @@ jobs:
           cd gradle-scripts
           ./gradlew --no-daemon --quiet build publishToMavenLocal
       # diozero
-      - name: Checkout and build 'diozero'
-        uses: actions/checkout@v3
-        with:
-          repository: EAGrahamJr/diozero
-          ref: main
-          path: diozero
-      - name: Build diozero
-        run: |
-          cd diozero
-          mvn --quiet --batch-mode -DskipTests install
+      #      - name: Checkout and build 'diozero'
+      #        uses: actions/checkout@v4
+      #        with:
+      #          repository: EAGrahamJr/diozero
+      #          ref: main
+      #          path: diozero
+      #      - name: Build diozero
+      #        run: |
+      #          cd diozero
+      #          mvn --quiet --batch-mode -DskipTests install
       # hassK
       - name: Checkout and build hassk
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: EAGrahamJr/HAssK
           path: hassk
@@ -69,7 +69,7 @@ jobs:
           ./gradlew --no-daemon --quiet build publishToMavenLocal
       # kobots-devices
       - name: Checkout and build kobots-devices
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: EAGrahamJr/kobots-devices
           path: kobots-devices
@@ -79,7 +79,7 @@ jobs:
           ./gradlew --no-daemon --quiet build publishToMavenLocal
       # BUILD IT
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build
         run: ./gradlew --no-daemon build dokkaJavadoc
       # the actual page generation
@@ -103,4 +103,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v3
+        uses: actions/deploy-pages@v4
