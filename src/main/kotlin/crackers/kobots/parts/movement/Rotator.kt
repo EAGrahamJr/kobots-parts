@@ -17,7 +17,7 @@
 package crackers.kobots.parts.movement
 
 import com.diozero.api.ServoDevice
-import com.diozero.devices.sandpit.motor.StepperMotorInterface
+import com.diozero.devices.sandpit.motor.BasicStepperMotor
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.BACKWARD
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.FORWARD
 import crackers.kobots.devices.at
@@ -106,8 +106,8 @@ interface Rotator : Actuator<RotationMovement> {
  *
  * [theStepper] _should_ be "released" after use to avoid motor burnout and to allow for "re-calibration" if necessary.
  */
-class BasicStepperRotator(
-    private val theStepper: StepperMotorInterface,
+open class BasicStepperRotator(
+    private val theStepper: BasicStepperMotor,
     gearRatio: Float = 1f,
     reversed: Boolean = false
 ) : Rotator {
@@ -128,15 +128,24 @@ class BasicStepperRotator(
     private val forwardDirection = if (reversed) BACKWARD else FORWARD
     private val backwardDirection = if (reversed) FORWARD else BACKWARD
 
-    fun release() = theStepper.release()
+    open fun release() = theStepper.release()
 
     private var stepsLocation: Int = 0
+    private var angleLocation: Int = 0
 
     override fun current(): Int = (360 * stepsLocation / maxSteps).roundToInt()
 
     override fun rotateTo(angle: Int): Boolean {
+        // first check to see if the angles already match
+        if (angleLocation == angle) return true
+
+        // find out where we're supposed to be for steps
         val destinationSteps = degreesToSteps[abs(angle % 360)]!! * (if (angle < 0) -1 else 1)
-        if (destinationSteps == stepsLocation) return true
+        // and if steps match, angles match and everything is good
+        if (destinationSteps == stepsLocation) {
+            angleLocation = angle
+            return true
+        }
 
         // move towards the destination
         if (destinationSteps < stepsLocation) {
@@ -147,11 +156,13 @@ class BasicStepperRotator(
             theStepper.step(forwardDirection)
         }
         // are we there yet?
-        return destinationSteps == stepsLocation
+        return (destinationSteps == stepsLocation).also {
+            if (it) angleLocation = angle
+        }
     }
 
     /**
-     * TODO replace this with a translation table or something to account for "drift" (probably due to all the rounding)
+     * TODO is this really necessary?
      */
     fun reset() {
         stepsLocation = 0
@@ -206,7 +217,7 @@ interface LimitedRotator : Rotator {
  *
  * The servo motion is modeled as a "simple" servo, with no gear ratio or other mechanical limitations.
  */
-class SimpleServoRotator(
+open class SimpleServoRotator(
     private val theServo: ServoDevice,
     private val servoRange: IntRange,
     private val deltaDegrees: Int? = 1
@@ -255,7 +266,7 @@ class SimpleServoRotator(
  * This would indicate that the servo _might not_ move, as the target is within the delta given.
  *
  */
-class ServoRotator(
+open class ServoRotator(
     private val theServo: ServoDevice,
     override val physicalRange: IntRange,
     private val servoRange: IntRange,

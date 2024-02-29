@@ -17,6 +17,8 @@
 package crackers.kobots.parts.movement
 
 import com.diozero.api.ServoDevice
+import com.diozero.devices.sandpit.motor.BasicStepperMotor
+import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -95,7 +97,7 @@ interface LinearActuator : Actuator<LinearMovement> {
  *
  * TODO add a delta to manage the rate of change
  */
-class ServoLinearActuator(
+open class ServoLinearActuator(
     val theServo: ServoDevice,
     val homeDegrees: Float,
     val maximumDegrees: Float
@@ -110,17 +112,63 @@ class ServoLinearActuator(
         if (delta != 0) {
             val currentAngle = theServo.angle
 
-            if (delta > 0) {
-                theServo.angle = currentAngle + whichWay
-            } else {
-                theServo.angle = currentAngle - whichWay
-            }
+            theServo.angle = if (delta > 0) currentAngle + whichWay else currentAngle - whichWay
         }
         return abs(percentage - current()) <= 1
     }
 
     override fun current(): Int {
         val degrees = theServo.angle
-        return (abs(degrees - homeDegrees) * 100 / servoSwingDegrees).roundToInt()
+        return (abs(degrees - homeDegrees) * 100 / servoSwingDegrees).roundToInt().coerceIn(0..100)
     }
+}
+
+/**
+ * An actuator that translates percentages into steps on a stepper motor. Note that due to rounding issues between
+ * these two integer values, the positioning is not guaranteed to be exact.
+ *
+ * **ONLY WORKS WITH SINGLE-STEP DRIVERS!**
+ */
+open class StepperLinearActuator(
+    val theStepper: BasicStepperMotor,
+    val maxSteps: Int,
+    val reversed: Boolean = false
+) : LinearActuator {
+
+    private val pct2Steps = (0..100).map { pct -> pct to (pct * maxSteps / 100f).roundToInt() }.toMap()
+
+    private var currentSteps: Int = 0
+    private var currentPercent: Int = 0
+
+    override fun extendTo(percentage: Int): Boolean {
+        // out of range or already there
+        if (percentage < 0 || percentage > 100 || percentage == currentPercent) return true
+
+        // are we there yet?
+        val destination = pct2Steps[percentage]!!
+        if (destination == currentSteps) {
+            currentPercent = percentage
+            return true
+        }
+
+        val direction = when {
+            destination < currentSteps -> {
+                currentSteps--
+                if (reversed) Direction.FORWARD else Direction.BACKWARD
+            }
+
+            else -> {
+                currentSteps++
+                if (reversed) Direction.BACKWARD else Direction.FORWARD
+            }
+        }
+        theStepper.step(direction)
+        return (destination == currentSteps).also {
+            if (it) currentPercent = percentage
+        }
+    }
+
+    override fun current() = (currentSteps * 100f / maxSteps).roundToInt().coerceIn(0..100)
+
+    open fun release() = theStepper.release()
 }

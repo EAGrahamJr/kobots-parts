@@ -17,12 +17,12 @@
 package crackers.kobots.parts.movement
 
 import com.diozero.api.ServoDevice
+import com.diozero.devices.sandpit.motor.BasicStepperMotor
 import com.diozero.devices.sandpit.motor.StepperMotorInterface
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
-import io.mockk.mockk
 import io.mockk.mockkClass
 import io.mockk.verify
 
@@ -33,10 +33,10 @@ class RotatorTest : FunSpec(
     {
         context("Stepper") {
             @MockK
-            lateinit var mockStepper: StepperMotorInterface
+            lateinit var mockStepper: BasicStepperMotor
 
             beforeTest {
-                mockStepper = mockk<StepperMotorInterface>()
+                mockStepper = mockkClass(BasicStepperMotor::class)
             }
             /**
              * Test the rotatable with a stepper motor: the gear ratio is 1:1 and the stepper motor has 200 steps per rotation.
@@ -90,22 +90,19 @@ class RotatorTest : FunSpec(
         context("Servo") {
             @MockK
             lateinit var mockServo: ServoDevice
-
+            var currentAngle = 0f
             beforeTest {
                 mockServo = mockkClass(ServoDevice::class)
+                every { mockServo.angle } answers { currentAngle }
+                every { mockServo.angle = any() } answers { currentAngle = args[0] as Float }
             }
-
 
             /**
              * Test a rotatable with a servo motor. The physical range is 0 to 90 degrees and the servo has a range of 0 to 180.
              * Assume the servo angle is at 43 degrees and the target is 87 physical degrees.
              */
             test("rotatable with servo") {
-                var currentAngle = 43f
-                every { mockServo.angle } answers { currentAngle }
-                every { mockServo.angle = any() } answers {
-                    currentAngle = args[0] as Float
-                }
+                currentAngle = 43f
                 val rotatable = ServoRotator(mockServo, IntRange(0, 90), IntRange(0, 180))
 
                 while (!rotatable.rotateTo(87)) {
@@ -122,11 +119,7 @@ class RotatorTest : FunSpec(
              * 180 to 0. Assume the servo angle is at 162 degrees and the target is 45 physical degrees.
              */
             test("rotatable with servo reversed") {
-                var currentAngle = 162f
-                every { mockServo.angle } answers { currentAngle }
-                every { mockServo.angle = any() } answers {
-                    currentAngle = args[0] as Float
-                }
+                currentAngle = 162f
                 val rotatable = ServoRotator(mockServo, IntRange(-10, 90), IntRange(180, 0))
 
                 while (!rotatable.rotateTo(45)) {
