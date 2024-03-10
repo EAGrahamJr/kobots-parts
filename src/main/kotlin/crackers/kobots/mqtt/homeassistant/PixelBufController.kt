@@ -59,7 +59,7 @@ class SinglePixelLightController(
         } catch (t: Throwable) {
             logger.error("Error executing effect $effect", t)
         }
-    }.whenComplete { _, t ->
+    }.whenComplete { _, _ ->
         currentEffect.set(null)
     }
 }
@@ -116,7 +116,7 @@ class PixelBufController(
         } catch (t: Throwable) {
             logger.error("Error executing effect $effect", t)
         }
-    }.whenComplete { _, t ->
+    }.whenComplete { _, _ ->
         currentEffect.set(null)
     }
 }

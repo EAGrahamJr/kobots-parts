@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Handles simple text messages.
  */
-class KobotTextEntity(
+open class KobotTextEntity(
     val textHandler: (String) -> Unit,
     uniqueId: String,
     name: String,

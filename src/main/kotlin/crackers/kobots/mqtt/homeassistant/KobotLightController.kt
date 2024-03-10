@@ -46,9 +46,10 @@ class BasicLightController(val device: PwmOutputDevice) : LightController {
     override val lightEffects: List<String>? = null
 
     override fun set(command: LightCommand) = with(command) {
-        when {
-            brightness != null -> device.setValue(brightness / 100f)
-            state != null -> device.set(state)
+        if (brightness != null) {
+            device.setValue(brightness / 100f)
+        } else {
+            device.set(state)
         }
     }
 
