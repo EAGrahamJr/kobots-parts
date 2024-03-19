@@ -35,7 +35,7 @@ open class KobotNumberEntity(
         put("step", step)
     }
 
-    override fun currentState() = handler.currentState?.toString() ?: "None"
+    override fun currentState() = handler.currentState()?.toString() ?: "None"
 
     override fun handleCommand(payload: String) {
         handler.move(payload.toFloat())
@@ -43,7 +43,7 @@ open class KobotNumberEntity(
 
     companion object {
         interface NumberHandler {
-            val currentState: Float?
+            fun currentState(): Float?
             fun move(target: Float)
         }
 

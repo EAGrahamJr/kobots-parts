@@ -162,6 +162,12 @@ object AppCommon {
     fun goToSleep() = publishToTopic(SLEEP_TOPIC, SleepEvent(true))
     fun wakey() = publishToTopic(SLEEP_TOPIC, SleepEvent(false))
 
+    fun <F> ignoreErrors(executionBlock: () -> F?): F? = try {
+        executionBlock()
+    } catch (_: Throwable) {
+        null
+    }
+
     /**
      * The remote hostname property used for the diozero remote daemon.
      */

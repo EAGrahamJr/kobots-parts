@@ -224,8 +224,7 @@ interface DeviceClass {
         if (this.name != "NONE") {
             json.remove("icon")
             json.put("device_class", this.name.lowercase())
-
-            if (unitOfMeasurement != null) json.put("unit_of_measurement", unitOfMeasurement)
         }
+        if (unitOfMeasurement != null) json.put("unit_of_measurement", unitOfMeasurement)
     }
 }

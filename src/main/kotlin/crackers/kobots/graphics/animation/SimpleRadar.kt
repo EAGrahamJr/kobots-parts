@@ -1,4 +1,4 @@
-package crackers.kobots.parts.app.io.graphics
+package crackers.kobots.graphics.animation
 
 import java.awt.Color
 import java.awt.Graphics2D

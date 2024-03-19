@@ -80,7 +80,7 @@ class LinearTest : FunSpec(
             lateinit var mockStepper: BasicStepperMotor
             beforeTest {
                 mockStepper = mockkClass(BasicStepperMotor::class)
-                every { mockStepper.step(any()) } answers {
+                every { mockStepper.step(any(), any()) } answers {
                     // TODO do we need anything here?
                 }
             }
@@ -94,7 +94,7 @@ class LinearTest : FunSpec(
                 while (!linear.extendTo(75)) {
                     // just count things
                 }
-                verify(exactly = 150) { mockStepper.step(Direction.FORWARD) }
+                verify(exactly = 150) { mockStepper.step(Direction.FORWARD, any()) }
             }
 
             /**
@@ -110,8 +110,8 @@ class LinearTest : FunSpec(
                 while (!linear.extendTo(33)) {
                     // just count things
                 }
-                verify(exactly = 25) { mockStepper.step(Direction.BACKWARD) }
-                verify(exactly = 8) { mockStepper.step(Direction.FORWARD) }
+                verify(exactly = 25) { mockStepper.step(Direction.BACKWARD, any()) }
+                verify(exactly = 8) { mockStepper.step(Direction.FORWARD, any()) }
             }
         }
     }

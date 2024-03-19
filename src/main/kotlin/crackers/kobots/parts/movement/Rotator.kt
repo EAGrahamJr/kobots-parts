@@ -17,6 +17,7 @@
 package crackers.kobots.parts.movement
 
 import com.diozero.api.ServoDevice
+import com.diozero.devices.sandpit.motor.BasicStepperController.StepStyle
 import com.diozero.devices.sandpit.motor.BasicStepperMotor
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.BACKWARD
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.FORWARD
@@ -44,24 +45,28 @@ interface Rotator : Actuator<RotationMovement> {
     infix fun rotateTo(angle: Int): Boolean
 
     /**
+     * TODO this does not work because it doesn't set a "real" reachable target
+     *
      * Rotate by the given delta in a positive direction. The target may or may not move by the indicated amount,
      * depending on the implementation and current location.
      *
      * Example: rotator += 5
      */
-    operator fun plusAssign(delta: Int) {
-        rotateTo(current() + delta)
-    }
+//    operator fun plusAssign(delta: Int) {
+//        rotateTo(current() + delta)
+//    }
 
     /**
+     * TODO this does not work because it doesn't set a "real" reachable target
+     *
      * Rotate by the given delta in a negative direction. The target may or may not move by the indicated amount,
      * depending on the implementation and current location.
      *
      * Example: rotator -= 5
      */
-    operator fun minusAssign(delta: Int) {
-        rotateTo(current() - delta)
-    }
+//    operator fun minusAssign(delta: Int) {
+//        rotateTo(current() - delta)
+//    }
 
     /**
      * Move one degree negatively, if possible.
@@ -69,7 +74,7 @@ interface Rotator : Actuator<RotationMovement> {
      * Example: -rotator
      */
     operator fun unaryMinus() {
-        minusAssign(1)
+        rotateTo(current() - 1)
     }
 
     /**
@@ -78,7 +83,7 @@ interface Rotator : Actuator<RotationMovement> {
      * Example: +rotator
      */
     operator fun unaryPlus() {
-        plusAssign(1)
+        rotateTo(current() + 1)
     }
 
     /**
@@ -109,7 +114,8 @@ interface Rotator : Actuator<RotationMovement> {
 open class BasicStepperRotator(
     private val theStepper: BasicStepperMotor,
     gearRatio: Float = 1f,
-    reversed: Boolean = false
+    reversed: Boolean = false,
+    val stepStyle: StepStyle = StepStyle.SINGLE
 ) : Rotator {
 
     private val maxSteps: Float
@@ -150,10 +156,10 @@ open class BasicStepperRotator(
         // move towards the destination
         if (destinationSteps < stepsLocation) {
             stepsLocation--
-            theStepper.step(backwardDirection)
+            theStepper.step(backwardDirection, stepStyle)
         } else {
             stepsLocation++
-            theStepper.step(forwardDirection)
+            theStepper.step(forwardDirection, stepStyle)
         }
         // are we there yet?
         return (destinationSteps == stepsLocation).also {

@@ -14,7 +14,7 @@
  * permissions and limitations under the License.
  */
 
-package crackers.kobots.parts.app.io.graphics
+package crackers.kobots.graphics.animation
 
 import java.awt.*
 import kotlin.math.max

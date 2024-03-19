@@ -16,8 +16,8 @@
 
 package crackers.kobots.parts.app.io
 
+import crackers.kobots.graphics.center
 import crackers.kobots.parts.app.io.SmallMenuDisplay.DisplayMode
-import crackers.kobots.parts.center
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D

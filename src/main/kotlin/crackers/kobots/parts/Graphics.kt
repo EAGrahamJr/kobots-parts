@@ -1,9 +1,6 @@
 package crackers.kobots.parts
 
 import java.awt.Color
-import java.awt.Font
-import java.awt.FontMetrics
-import javax.imageio.ImageIO
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -103,18 +100,3 @@ fun Color.toKelvin(): Int {
 val PURPLE = Color(0xB4, 0, 0xFF)
 val GOLDENROD = Color(255, 150, 0)
 val ORANGISH = Color(255, 130, 0)
-
-/**
- * Use font metrics to center some text in an area
- */
-fun FontMetrics.center(text: String, width: Int) = kotlin.math.max((width - stringWidth(text)) / 2, 0)
-
-/**
- * Load an image.
- */
-fun loadImage(name: String) = ImageIO.read(object {}::class.java.getResourceAsStream(name))
-
-/**
- * A convenience function to load a custom font from resources.
- */
-fun loadFont(name: String) = Font.createFont(Font.TRUETYPE_FONT, object {}::class.java.getResourceAsStream(name))

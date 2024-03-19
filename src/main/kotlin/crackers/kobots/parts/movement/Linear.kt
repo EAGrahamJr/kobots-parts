@@ -17,6 +17,7 @@
 package crackers.kobots.parts.movement
 
 import com.diozero.api.ServoDevice
+import com.diozero.devices.sandpit.motor.BasicStepperController.StepStyle
 import com.diozero.devices.sandpit.motor.BasicStepperMotor
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction
 import kotlin.math.abs
@@ -55,14 +56,16 @@ interface LinearActuator : Actuator<LinearMovement> {
     }
 
     /**
+     * TODO this does not work because it doesn't set a "real" reachable target
+     *
      * Extend the actuator by the given delta. The target may or may not move by the indicated amount if the bounds are
      * reached, depending on the implementation and current location.
      *
      * Example: `actuator += 5`
      */
-    operator fun plusAssign(delta: Int) {
-        extendTo(current() + delta)
-    }
+//    operator fun plusAssign(delta: Int) {
+//        extendTo(current() + delta)
+//    }
 
     /**
      * Retract the actuator by one step.
@@ -74,14 +77,16 @@ interface LinearActuator : Actuator<LinearMovement> {
     }
 
     /**
+     * TODO this does not work because it doesn't set a "real" reachable target
+     *
      * Retract the actuator by the given delta. The target may or may not move by the indicated amount if the bounds are
      * reached, depending on the implementation and current location.
      *
      * Example: `actuator -= 5`
      */
-    operator fun minusAssign(delta: Int) {
-        extendTo(current() - delta)
-    }
+//    operator fun minusAssign(delta: Int) {
+//        extendTo(current() - delta)
+//    }
 
     /**
      * Operator short-cut for [extendTo].
@@ -132,7 +137,8 @@ open class ServoLinearActuator(
 open class StepperLinearActuator(
     val theStepper: BasicStepperMotor,
     val maxSteps: Int,
-    val reversed: Boolean = false
+    val reversed: Boolean = false,
+    val stepStyle: StepStyle = StepStyle.SINGLE
 ) : LinearActuator {
 
     private val pct2Steps = (0..100).map { pct -> pct to (pct * maxSteps / 100f).roundToInt() }.toMap()
@@ -151,19 +157,24 @@ open class StepperLinearActuator(
             return true
         }
 
-        val direction = when {
-            destination < currentSteps -> {
-                currentSteps--
-                if (reversed) Direction.FORWARD else Direction.BACKWARD
-            }
-
-            else -> {
-                currentSteps++
-                if (reversed) Direction.BACKWARD else Direction.FORWARD
-            }
+        val direction: Direction
+        val stepDelta: Int
+        if (destination < currentSteps) {
+            direction = if (reversed) Direction.FORWARD else Direction.BACKWARD
+            stepDelta = -1
+        } else {
+            direction = if (reversed) Direction.BACKWARD else Direction.FORWARD
+            stepDelta = 1
         }
-        theStepper.step(direction)
-        return (destination == currentSteps).also {
+
+        // take a single step because that's the lowest "resolution"
+        theStepper.step(direction, stepStyle)
+        currentSteps += stepDelta
+
+        // bounds check
+        val underShoot = stepDelta < 0 && currentSteps <= destination
+        val overShoot = stepDelta > 0 && currentSteps >= destination
+        return (underShoot || overShoot).also {
             if (it) currentPercent = percentage
         }
     }

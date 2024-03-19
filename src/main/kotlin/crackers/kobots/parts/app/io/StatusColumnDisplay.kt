@@ -16,7 +16,7 @@
 
 package crackers.kobots.parts.app.io
 
-import crackers.kobots.parts.center
+import crackers.kobots.graphics.center
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
@@ -34,6 +34,10 @@ interface StatusColumnDisplay {
 /**
  * Default implementation of [StatusColumnDisplay].
  */
+@Deprecated(
+    "Does not work except for small displays. Note the sidget is not a direct replacement.",
+    replaceWith = ReplaceWith("crackers.kobots.graphics.widgets.ColumnWidget")
+)
 class StatusColumnDelegate(private val widthOfDisplay: Int, private val heightOfDisplay: Int) : StatusColumnDisplay {
     private var bgColor = Color.BLACK
     private var fgColor = Color.WHITE
