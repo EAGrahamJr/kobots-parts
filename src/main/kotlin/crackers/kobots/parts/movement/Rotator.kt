@@ -45,48 +45,6 @@ interface Rotator : Actuator<RotationMovement> {
     infix fun rotateTo(angle: Int): Boolean
 
     /**
-     * TODO this does not work because it doesn't set a "real" reachable target
-     *
-     * Rotate by the given delta in a positive direction. The target may or may not move by the indicated amount,
-     * depending on the implementation and current location.
-     *
-     * Example: rotator += 5
-     */
-//    operator fun plusAssign(delta: Int) {
-//        rotateTo(current() + delta)
-//    }
-
-    /**
-     * TODO this does not work because it doesn't set a "real" reachable target
-     *
-     * Rotate by the given delta in a negative direction. The target may or may not move by the indicated amount,
-     * depending on the implementation and current location.
-     *
-     * Example: rotator -= 5
-     */
-//    operator fun minusAssign(delta: Int) {
-//        rotateTo(current() - delta)
-//    }
-
-    /**
-     * Move one degree negatively, if possible.
-     *
-     * Example: -rotator
-     */
-    operator fun unaryMinus() {
-        rotateTo(current() - 1)
-    }
-
-    /**
-     * Move one degree positively, if possible.
-     *
-     * Example: +rotator
-     */
-    operator fun unaryPlus() {
-        rotateTo(current() + 1)
-    }
-
-    /**
      * Rotate to the given angle. Returns `true` if the target has been reached.
      */
     operator fun div(angle: Int): Boolean = rotateTo(angle)

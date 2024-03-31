@@ -47,48 +47,6 @@ interface LinearActuator : Actuator<LinearMovement> {
     fun current(): Int
 
     /**
-     * Extend the actuator by one step.
-     *
-     * Example: `+actuator`
-     */
-    operator fun unaryPlus() {
-        extendTo(current() + 1)
-    }
-
-    /**
-     * TODO this does not work because it doesn't set a "real" reachable target
-     *
-     * Extend the actuator by the given delta. The target may or may not move by the indicated amount if the bounds are
-     * reached, depending on the implementation and current location.
-     *
-     * Example: `actuator += 5`
-     */
-//    operator fun plusAssign(delta: Int) {
-//        extendTo(current() + delta)
-//    }
-
-    /**
-     * Retract the actuator by one step.
-     *
-     * Example: `-actuator`
-     */
-    operator fun unaryMinus() {
-        extendTo(current() - 1)
-    }
-
-    /**
-     * TODO this does not work because it doesn't set a "real" reachable target
-     *
-     * Retract the actuator by the given delta. The target may or may not move by the indicated amount if the bounds are
-     * reached, depending on the implementation and current location.
-     *
-     * Example: `actuator -= 5`
-     */
-//    operator fun minusAssign(delta: Int) {
-//        extendTo(current() - delta)
-//    }
-
-    /**
      * Operator short-cut for [extendTo].
      *
      * Example: `actuator % 50`
