@@ -14,7 +14,7 @@ open class KobotNumberEntity(
     val deviceClass: NumericDevice = NumericDevice.NONE,
     val min: Int = 1,
     val max: Int = 100,
-    val mode: DisplayMode = DisplayMode.auto,
+    val mode: DisplayMode = DisplayMode.AUTO,
     val step: Float = 1.0f,
     val unitOfMeasurement: String? = null
 ) : CommandEntity(
@@ -31,7 +31,7 @@ open class KobotNumberEntity(
 
         put("max", max)
         put("min", min)
-        put("mode", mode.name)
+        put("mode", mode.name.lowercase())
         put("step", step)
     }
 
@@ -48,7 +48,7 @@ open class KobotNumberEntity(
         }
 
         enum class DisplayMode {
-            auto, box, slider
+            AUTO, BOX, SLIDER
         }
 
         enum class NumericDevice : DeviceClass {
