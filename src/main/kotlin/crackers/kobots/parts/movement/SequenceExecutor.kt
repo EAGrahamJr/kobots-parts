@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Request to execute a sequence of actions.
  */
-class SequenceRequest(val sequence: ActionSequence, override val interruptable: Boolean = true) : KobotsAction
+class SequenceRequest(val sequence: ActionSequence) : KobotsAction
 
 /**
  * Handles running a sequence for a thing. Every sequence is executed on a background thread that runs until
@@ -46,24 +46,12 @@ class SequenceRequest(val sequence: ActionSequence, override val interruptable: 
  *
  * @param executorName the name of the executor
  * @param mqttClient the MQTT client for publishing events
- * @param executionSpeeds the map of [ActionSpeed] to milliseconds
  */
 abstract class SequenceExecutor(
     val executorName: String,
-    private val mqttClient: KobotsMQTT,
-    private val executionSpeeds: Map<ActionSpeed, Long> = emptyMap()
+    private val mqttClient: KobotsMQTT
 ) {
     protected val logger: Logger = LoggerFactory.getLogger(executorName)
-
-    private fun ActionSpeed.toMillis(): Long {
-        return executionSpeeds[this] ?: when (this) {
-            ActionSpeed.VERY_SLOW -> 100
-            ActionSpeed.SLOW -> 50
-            ActionSpeed.NORMAL -> 10
-            ActionSpeed.FAST -> 5
-            ActionSpeed.VERY_FAST -> 2
-        }
-    }
 
     /**
      * Each executor gets a single thread pool for itself.
@@ -132,7 +120,7 @@ abstract class SequenceExecutor(
             preExecution()
             try {
                 request.sequence.build().forEach { action ->
-                    val maxPause = Duration.ofMillis(action.speed.toMillis())
+                    val maxPause = Duration.ofMillis(action.speed.millis)
 
                     // while can run, not stopping, and the action is not done...
                     while (canRun() && !stopImmediately && !action.action.step(maxPause)) {

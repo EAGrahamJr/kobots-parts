@@ -22,9 +22,7 @@ import java.util.concurrent.Flow
 import java.util.concurrent.SubmissionPublisher
 
 interface KobotsMessage
-interface KobotsAction : KobotsMessage {
-    val interruptable: Boolean
-}
+interface KobotsAction : KobotsMessage
 
 interface KobotsEvent : KobotsMessage
 
@@ -114,7 +112,6 @@ private fun <T : KobotsMessage> getPublisher(topic: String) =
 const val STOP_NOW = "Emergency Stop"
 
 class EmergencyStop : KobotsAction {
-    override val interruptable: Boolean = false
     val name = STOP_NOW
 }
 

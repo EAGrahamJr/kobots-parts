@@ -66,8 +66,12 @@ private class ExecutableMovementBuilder(private val function: () -> Boolean) :
     }
 }
 
-enum class ActionSpeed {
-    VERY_SLOW, SLOW, NORMAL, FAST, VERY_FAST
+interface ActionSpeed {
+    val millis: Long
+}
+
+enum class DefaultActionSpeed(override val millis: Long) : ActionSpeed {
+    VERY_SLOW(100), SLOW(50), NORMAL(10), FAST(5), VERY_FAST(2)
 }
 
 /**
@@ -75,7 +79,7 @@ enum class ActionSpeed {
  */
 class ActionBuilder {
     private val steps = mutableListOf<MovementBuilder<*, *>>()
-    var requestedSpeed: ActionSpeed = ActionSpeed.NORMAL
+    var requestedSpeed: ActionSpeed = DefaultActionSpeed.NORMAL
 
     /**
      * DSL to rotate a [Rotator]: requires stop check and angle

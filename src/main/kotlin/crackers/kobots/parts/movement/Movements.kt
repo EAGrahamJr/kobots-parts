@@ -16,7 +16,6 @@
 
 package crackers.kobots.parts.movement
 
-import crackers.kobots.app.AppCommon
 import crackers.kobots.parts.app.KobotSleep
 import java.time.Duration
 
@@ -45,7 +44,7 @@ interface Actuator<M : Movement> {
  * An [Action] is a sequence of [Movement]s to perform. Each [Movement] is associated with a [Actuator] and is to be
  * performed in sequence. The [Action] is considered complete when all [Movement]s have been performed.
  *
- * `Actions` are not re-runnable, nor are they thread-safe.
+ * `Actions` are not re-runnable.
  */
 class Action(movements: Map<Actuator<Movement>, Movement>) {
 
@@ -56,11 +55,14 @@ class Action(movements: Map<Actuator<Movement>, Movement>) {
     private val movementResults = BooleanArray(executionList.size) { false }
 
     /**
-     * Executes all the movements in the [Action] and returns `true` if all movements were successful. If a
-     * [stepExecutionTime] is provided, then each movement will pause until the next is executed (the value is
+     * Executes each movement in the [Action] and returns `true` if all movements were successful. If `false`, this
+     * indicates that the action is not complete and should execute [step] again.
+     *
+     * If a [stepExecutionTime] is provided, then each movement will pause until the next is executed (the value is
      * roughly distributed between steps). This is useful for ensuring that the [Action] is not executed too quickly.
      *
-     * This function is **not** thread-safe.
+     * This is a **blocking** call: the assumption is that it is only used by a single, controlling thread.
+     * There is currently no means to interrupt a single step, aside from each movement's `stopCheck`.
      */
     fun step(stepExecutionTime: Duration = Duration.ZERO): Boolean {
         // get nano sleeps
@@ -80,10 +82,9 @@ class Action(movements: Map<Actuator<Movement>, Movement>) {
         return try {
             block()
         } finally {
-            if (AppCommon.applicationRunning) {
-                val runtime = System.nanoTime() - startAt
-                if (runtime < pauseForNanos) KobotSleep.nanos(pauseForNanos - runtime)
-            }
+            // if the execution takes too little time, snooze for the remaining allocation
+            val runtime = System.nanoTime() - startAt
+            if (runtime < pauseForNanos) KobotSleep.nanos(pauseForNanos - runtime)
         }
     }
 
