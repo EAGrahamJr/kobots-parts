@@ -33,7 +33,7 @@ open class VerticalPercentageIndicator(
     init {
         with(graphics) {
             val fm = getFontMetrics(labelFont)
-            pointerLeft = fm.stringWidth(LIFT_TOP_LABEL) + lineWidth + 1
+            pointerLeft = fm.stringWidth(LIFT_TOP_LABEL) + lineWidth + 1 + x
             pointerRight = pointerLeft + pointerSize
 
             // these define the actual up/down scale
