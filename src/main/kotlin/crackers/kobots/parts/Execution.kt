@@ -31,6 +31,12 @@ fun ScheduledExecutorService.scheduleAtFixedRate(
 ) = scheduleAtFixedRate(intialDelay.toJavaDuration(), period.toJavaDuration(), command)
 
 /**
+ * Rate and delay are the same.
+ */
+fun ScheduledExecutorService.scheduleAtRate(rate: kotlin.time.Duration, command: () -> Unit) =
+    scheduleAtFixedRate(rate, rate, command)
+
+/**
  * Run a thing at a fixed delay extension function for better readability. Granularity is **nanoseconds**.
  */
 fun ScheduledExecutorService.scheduleWithFixedDelay(
@@ -38,3 +44,9 @@ fun ScheduledExecutorService.scheduleWithFixedDelay(
     delay: kotlin.time.Duration,
     command: () -> Unit
 ) = scheduleWithFixedDelay(intialDelay.toJavaDuration(), delay.toJavaDuration(), command)
+
+/**
+ * Delay to start and delay between are the same.
+ */
+fun ScheduledExecutorService.scheduleWithDelay(delay: kotlin.time.Duration, command: () -> Unit) =
+    scheduleWithFixedDelay(delay, delay, command)
