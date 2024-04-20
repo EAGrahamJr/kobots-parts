@@ -19,15 +19,12 @@ package crackers.kobots.app
 import com.typesafe.config.ConfigFactory
 import crackers.hassk.HAssKClient
 import crackers.kobots.mqtt.KobotsMQTT
-import crackers.kobots.parts.app.KobotSleep
 import crackers.kobots.parts.app.KobotsEvent
 import crackers.kobots.parts.app.publishToTopic
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
-import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -90,41 +87,6 @@ object AppCommon {
                 logger.error("Error in execution", t)
             }
         }
-    }
-
-    /**
-     * Run a [block] and ensure it takes up **at least** [maxPause] time. This is basically to keep polling or control
-     * loops from running amok, if not using scheduling. The pause is executed even if an error occurs in the block.
-     *
-     * **Note:** the [applicationRunning] flag is checked before the pause is executed, so if the application is stopped
-     * while the block is executing, the pause will not be executed.
-     *
-     * The purported granularity of the pause is _ostensibly_ nanoseconds.
-     */
-    @Deprecated("Use Java executors instead")
-    fun <R> executeWithMinTime(maxPause: Duration, block: () -> R): R {
-        val pauseForNanos = maxPause.toNanos()
-        val startAt = System.nanoTime()
-
-        return try {
-            block()
-        } finally {
-            if (applicationRunning) {
-                val runtime = System.nanoTime() - startAt
-                if (runtime < pauseForNanos) KobotSleep.nanos(pauseForNanos - runtime)
-            }
-        }
-    }
-
-    /**
-     * Run an execution loop until the run-flag says stop
-     */
-    @Deprecated(
-        "Use Java executors instead",
-        ReplaceWith("AppCommon.executor.scheduleWithFixedDelay(maxPause, maxPause, block)")
-    )
-    fun checkRun(maxPause: Duration, block: () -> Unit): Future<*> = executor.submit {
-        while (applicationRunning) executeWithMinTime(maxPause) { block() }
     }
 
     /**
