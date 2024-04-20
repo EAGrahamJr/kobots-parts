@@ -142,6 +142,21 @@ class ActionBuilder {
     }
 
     /**
+     * Create a new [ActionBuilder] with the movements from this one plus the other.
+     */
+    operator fun plus(otherBuilder: ActionBuilder) = ActionBuilder().also {
+        it.steps += this.steps
+        it.steps += otherBuilder.steps
+    }
+
+    /**
+     * Add another's movements to this.
+     */
+    operator fun plusAssign(otherBuilder: ActionBuilder) {
+        steps += otherBuilder.steps
+    }
+
+    /**
      * Build the action's steps.
      */
     fun build(): Action {
@@ -173,10 +188,17 @@ class ActionSequence {
         steps += it
     }
 
-    operator fun plus(ab: ActionBuilder) {
-        steps += ab
+    /**
+     * Create a new sequence with the steps from here with the other appended.
+     */
+    operator fun plus(otherSequence: ActionSequence) = ActionSequence().also {
+        it.steps += this.steps
+        it.steps += otherSequence.steps
     }
 
+    /**
+     * Add the other sequence's steps to this one.
+     */
     operator fun plusAssign(otherSequence: ActionSequence) {
         steps += otherSequence.steps
     }
