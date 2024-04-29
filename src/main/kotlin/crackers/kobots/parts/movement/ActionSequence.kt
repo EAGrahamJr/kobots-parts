@@ -16,6 +16,9 @@
 
 package crackers.kobots.parts.movement
 
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
+
 /**
  * Base parts for all movements.
  */
@@ -68,6 +71,7 @@ private class ExecutableMovementBuilder(private val function: () -> Boolean) :
 
 interface ActionSpeed {
     val millis: Long
+    fun duration() = millis.toDuration(DurationUnit.MILLISECONDS)
 }
 
 enum class DefaultActionSpeed(override val millis: Long) : ActionSpeed {
@@ -150,7 +154,7 @@ class ActionBuilder {
     }
 
     /**
-     * Add another's movements to this.
+     * Add another builder's movements to this.
      */
     operator fun plusAssign(otherBuilder: ActionBuilder) {
         steps += otherBuilder.steps
@@ -213,3 +217,8 @@ class ActionSequence {
  * Typesafe "builder" (DSL) for creating a sequence of actions.
  */
 fun sequence(init: ActionSequence.() -> Unit): ActionSequence = ActionSequence().apply(init)
+
+/**
+ * Typesafe "builder" (DSL) for just the actions.
+ */
+fun action(init: ActionBuilder.() -> Unit): ActionBuilder = ActionBuilder().apply(init)

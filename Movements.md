@@ -20,7 +20,6 @@ The sequences and actions are contained within a type-safe DSL. Actions and move
 Actuators have a small set of _operators_ that are supported:
 
 - `+=` and `-+` for relative changes
-- `+a` and `-a` (unary plus/minus) for increment and decrement
 - `%` on a `LinearActuator` for positioning
 
 Each `Actuator` type may also contain specific `infix` capable functions for more DSL-like behavior. Note that these functions are "direct drive" and should immediately affect the device.
@@ -40,12 +39,17 @@ This `Rotator` uses stepper motors to move to a position by keeping track of "st
 - "zero" position is entirely arbitrary and is assumed to be pre-calibrated
 - there are no angular limits imposed, so over-rotation is a possibility
 
+#### LimitedRotator
+
+A basic interface that defines a rotator with a _physical limit_. This is usually applied to servo motors with limited rotation spans. This class also defines some _extension_ functions to directly create `ServoRotator` objects from `ServoDevice`s.
+
 #### ServoRotator
 
-Models the attachment to a **non-continuous** servo. The physical movement is "mapped" to the servo's angular displacement.
+Models the attachment to a **non-continuous** servo. The physical movement is "mapped" to the servo's angular displacement. Accuracy is determined by the gear-ratio: sufficiently large ratios can cause physical angles to be mapped to the same servo angle, resutling in the servo not moving between them
 
-- due to rounding errors, some _physical_ angles may cause servo issues (e.g. jitter)
-- some angles may not be reachable (e.g. if the gear ratios work out to a servo being set to a _partial_ angle, it may not actually move)
+- mapping is calcuated on object creation and cannot be changed
+- overly large servo deltas _may_ cause the servo to ignore smaller movements
+- the _current_ position is the closest approximation from the mapping table
 
 ### Linear
 

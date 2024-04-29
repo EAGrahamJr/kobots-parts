@@ -20,7 +20,8 @@ import com.diozero.util.SleepUtil
 import java.time.Duration
 
 /**
- * Shortcuts for sleeping, wrapping the `diozero` utils.
+ * Shortcuts for sleeping, wrapping the `diozero` utils. Sleeps should be used
+ * **very** judiciously.
  */
 object KobotSleep {
     fun nanos(nanos: Long) {
@@ -41,5 +42,9 @@ object KobotSleep {
 
     fun duration(d: Duration) {
         nanos(d.toNanos())
+    }
+
+    infix fun of(d: kotlin.time.Duration) {
+        nanos(d.inWholeNanoseconds)
     }
 }
