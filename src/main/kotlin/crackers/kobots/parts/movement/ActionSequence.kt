@@ -192,6 +192,10 @@ class ActionSequence {
         steps += it
     }
 
+    infix fun append(actionBuilder: ActionBuilder) {
+        steps += actionBuilder
+    }
+
     /**
      * Create a new sequence with the steps from here with the other appended.
      */
