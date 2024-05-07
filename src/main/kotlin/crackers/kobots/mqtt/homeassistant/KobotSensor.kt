@@ -6,17 +6,22 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-abstract class KobotSensor<M : DeviceClass>(
+/**
+ * Basic sensor stuff. Updates are controlled by setting the sensor's current state
+ */
+abstract class KobotSensor<M : DeviceClass, T>(
     uniqueId: String,
     name: String,
     deviceIdentifier: DeviceIdentifier,
-    val expires: Duration,
+    private val expires: Duration,
     val deviceClass: M
 ) : AbstractKobotEntity(uniqueId, name, deviceIdentifier) {
 
     override fun currentState() = sensorState.get() ?: ""
 
     protected val sensorState = AtomicReference<String>()
+
+    abstract var currentState: T
 
     override fun discovery() = super.discovery().apply {
         put("entity_category", "diagnostic")
@@ -25,7 +30,7 @@ abstract class KobotSensor<M : DeviceClass>(
 }
 
 /**
- * On/off sensor, single state. If the [deviceClass] is set, Home Assistant will pick the appropraite "type" of
+ * On/off sensor, single state. If the [deviceClass] is set, Home Assistant will pick the appropriate "type" of
  * binary sensor.
  */
 open class KobotBinarySensor(
@@ -35,7 +40,7 @@ open class KobotBinarySensor(
     deviceClass: BinaryDevice = BinaryDevice.NONE,
     expires: Duration = Duration.ZERO,
     val offDelay: Duration = Duration.ZERO
-) : KobotSensor<BinaryDevice>(uniqueId, name, deviceIdentifier, expires, deviceClass) {
+) : KobotSensor<BinaryDevice, Boolean>(uniqueId, name, deviceIdentifier, expires, deviceClass) {
 
     // do not allow over-rides: this is required for proper integration
     final override val component = "binary_sensor"
@@ -46,7 +51,7 @@ open class KobotBinarySensor(
         deviceClass.addDiscovery(this)
     }
 
-    var currentState: Boolean
+    override var currentState: Boolean
         get() = sensorState.get() == "ON"
         set(v) {
             sensorState.set(if (v) "ON" else "OFF")
@@ -104,7 +109,7 @@ open class KobotAnalogSensor(
     val stateClass: StateClass = StateClass.NONE,
     val unitOfMeasurement: String? = null,
     val suggestedPrecision: Int? = null
-) : KobotSensor<AnalogDevice>(uniqueId, name, deviceIdentifier, expires, deviceClass) {
+) : KobotSensor<AnalogDevice, String?>(uniqueId, name, deviceIdentifier, expires, deviceClass) {
 
     // do not allow over-rides: this is required for proper integration
     final override val component = "sensor"
@@ -115,7 +120,7 @@ open class KobotAnalogSensor(
         deviceClass.addDiscovery(this, unitOfMeasurement)
     }
 
-    var currentState: String?
+    override var currentState: String?
         get() = sensorState.get()
         set(v) {
             sensorState.set(v)

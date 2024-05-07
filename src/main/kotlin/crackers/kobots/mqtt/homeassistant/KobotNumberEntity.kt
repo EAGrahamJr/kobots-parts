@@ -1,22 +1,24 @@
 package crackers.kobots.mqtt.homeassistant
 
+import org.json.JSONObject
+
 /**
- * HA has an easy way to "send" numbers as commands: this aligns really well with things like [Rotator] and
- * [LinearActuator] devices.
+ * HA has an easy way to "send" numbers as commands: this aligns really well with things like `Rotator` and
+ * `LinearActuator` devices.
  *
  * There are quite a few UI hints that can be set on these objects; defaults are set in all cases.
  */
 open class KobotNumberEntity(
-    val handler: NumberHandler,
+    private val handler: NumberHandler,
     uniqueId: String,
     name: String,
     deviceIdentifier: DeviceIdentifier,
-    val deviceClass: NumericDevice = NumericDevice.NONE,
-    val min: Int = 1,
-    val max: Int = 100,
-    val mode: DisplayMode = DisplayMode.AUTO,
-    val step: Float = 1.0f,
-    val unitOfMeasurement: String? = null
+    private val deviceClass: NumericDevice = NumericDevice.NONE,
+    private val min: Int = 1,
+    private val max: Int = 100,
+    private val mode: DisplayMode = DisplayMode.AUTO,
+    private val step: Float = 1.0f,
+    private val unitOfMeasurement: String? = null
 ) : CommandEntity(
     uniqueId,
     name,
@@ -26,7 +28,7 @@ open class KobotNumberEntity(
     override val component = "number"
     override val icon = "mdi:numeric"
 
-    override fun discovery() = super.discovery().apply {
+    override fun discovery(): JSONObject = super.discovery().apply {
         deviceClass.addDiscovery(this, unitOfMeasurement)
 
         put("max", max)
@@ -38,13 +40,13 @@ open class KobotNumberEntity(
     override fun currentState() = handler.currentState()?.toString() ?: "None"
 
     override fun handleCommand(payload: String) {
-        handler.move(payload.toFloat())
+        handler.set(payload.toFloat())
     }
 
     companion object {
         interface NumberHandler {
             fun currentState(): Float?
-            fun move(target: Float)
+            fun set(target: Float)
         }
 
         enum class DisplayMode {

@@ -15,8 +15,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 data class DeviceIdentifier @JvmOverloads constructor(
     val manufacturer: String,
     val model: String,
-    val identifer: String = InetAddress.getLocalHost().hostName
-)
+    val identifier: String = InetAddress.getLocalHost().hostName
+) {
+    fun asJSON(uniqueId: String) = JSONObject()
+        .put("identifiers", listOf(uniqueId, identifier))
+        .put("name", identifier)
+        .put("model", model)
+        .put("manufacturer", manufacturer)!!
+}
 
 /**
  * Defines the "device" for MQTT discovery and state messages.
@@ -69,7 +75,7 @@ interface KobotHAEntity : Comparable<KobotHAEntity> {
 
 /**
  * Abstraction for common attributes and methods for all Kobot entities for integration with Home Assistant via MQTT.
- * Because its part of this package, it assumes usage of the [AppCommon.mqttClient] singleton.
+ * Because its part of this package, it assumes usage of the [mqttClient] singleton.
  *
  * Devices and entities may be removed from HomeAssistant at any time, so the discovery message is sent on every
  * connection. Birth and last-will messages, and retention flags are **not** used because the client can be used for
@@ -85,7 +91,7 @@ abstract class AbstractKobotEntity(
     final override val deviceIdentifier: DeviceIdentifier
 ) : KobotHAEntity {
     init {
-        require(uniqueId.isNotBlank()) { "uniqeId must not be blank." }
+        require(uniqueId.isNotBlank()) { "uniqueId must not be blank." }
         require(name.isNotBlank()) { "name must not be blank." }
     }
 
@@ -107,12 +113,8 @@ abstract class AbstractKobotEntity(
      * because there are too many "base" configuration parameters to be able to handle them cleanly,
      * so just dump it on the child class to figure it out.
      */
-    override fun discovery() = JSONObject().apply {
-        val deviceId = JSONObject().put("identifiers", listOf(uniqueId, deviceIdentifier.identifer))
-            .put("name", deviceIdentifier.identifer).put("model", deviceIdentifier.model)
-            .put("manufacturer", deviceIdentifier.manufacturer)
-
-        put("device", deviceId)
+    override fun discovery(): JSONObject = JSONObject().apply {
+        put("device", deviceIdentifier.asJSON(uniqueId))
         put("entity_category", "config")
         put("icon", icon)
         put("name", name)
@@ -151,7 +153,7 @@ abstract class AbstractKobotEntity(
     }
 
     /**
-     * Send the discovery message for this device, if HA is avaliable.
+     * Send the discovery message for this device, if HA is available.
      */
     protected open fun sendDiscovery(discoveryPayload: JSONObject = discovery()) {
         if (homeassistantAvailable) {
@@ -161,7 +163,7 @@ abstract class AbstractKobotEntity(
     }
 
     /**
-     * Send the current state message for this device, if HA is avaliable. This is a _public_ method so that it
+     * Send the current state message for this device, if HA is available. This is a _public_ method so that it
      * **can** be triggered externally, such as in the case of effects running.
      */
     open fun sendCurrentState(state: String = currentState()) {
@@ -169,7 +171,7 @@ abstract class AbstractKobotEntity(
     }
 
     /**
-     * Removes the entity from HA: sends an empty configuration, if HA is avaliable. Note that this will **disable**
+     * Removes the entity from HA: sends an empty configuration, if HA is available. Note that this will **disable**
      * this entity from further use, although any topic subscriptions are still active.
      */
     open fun remove() {
@@ -207,7 +209,7 @@ abstract class CommandEntity(uniqueId: String, name: String, deviceIdentifier: D
         }
     }
 
-    override fun discovery() = super.discovery().put("command_topic", commandTopic)
+    override fun discovery(): JSONObject = super.discovery().put("command_topic", commandTopic)
 }
 
 /**

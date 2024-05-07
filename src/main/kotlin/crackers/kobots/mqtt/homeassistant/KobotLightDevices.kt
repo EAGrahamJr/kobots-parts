@@ -156,7 +156,6 @@ open class KobotRGBLight(
 ) : KobotLight(uniqueId, controller, name, deviceIdentifier) {
 
     override fun discovery() = super.discovery().apply {
-        put("color_mode", true)
         put("supported_color_modes", LightColorMode.entries.map { it.name.lowercase() })
     }
 }
