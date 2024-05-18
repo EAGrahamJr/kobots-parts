@@ -9,6 +9,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Just stuff.
  */
 
+const val on = true
+const val off = false
+
 /**
  * Extension function on a JSON object to get a on/off status as a boolean.
  */

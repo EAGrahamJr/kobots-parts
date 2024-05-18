@@ -124,10 +124,27 @@ object AppCommon {
     fun goToSleep() = publishToTopic(SLEEP_TOPIC, SleepEvent(true))
     fun wakey() = publishToTopic(SLEEP_TOPIC, SleepEvent(false))
 
-    fun <F> ignoreErrors(executionBlock: () -> F?): F? = try {
+    fun <F> ignoreErrors(executionBlock: () -> F?, logIt: Boolean = false): F? = try {
         executionBlock()
-    } catch (_: Throwable) {
+    } catch (t: Throwable) {
+        if (logIt) logger.error("Error trying to ignore: ${t.localizedMessage}")
         null
+    }
+
+    /**
+     * Start/stop things.
+     */
+    interface Startable {
+        fun start()
+        fun stop()
+    }
+
+    fun List<Startable>.convenientStartupHook() {
+        forEach(Startable::start)
+    }
+
+    fun List<Startable>.convenientShutdownHook(logErrors: Boolean = false) {
+        forEach { ignoreErrors(it::stop, logErrors) }
     }
 
     /**
