@@ -70,7 +70,7 @@ open class BasicStepperRotator(
     gearRatio: Float = 1f,
     reversed: Boolean = false,
     val stepStyle: StepStyle = StepStyle.SINGLE
-) : Rotator {
+) : Rotator, StepperActuator {
 
     private val maxSteps: Float
 
@@ -99,14 +99,17 @@ open class BasicStepperRotator(
     /**
      * Pass through to release the stepper when it's not directly available.
      */
-    open fun release() = theStepper.release()
+    override fun release() = theStepper.release()
 
-    private var stepsLocation: Int = 0
-    private var angleLocation: Int = 0
+    protected var stepsLocation: Int = 0
+    protected var angleLocation: Int = 0
 
     override fun current(): Int = angleLocation
 
     override fun rotateTo(angle: Int): Boolean {
+        // checks things
+        if (limitCheck(angle)) return true
+
         // first check to see if the angles already match
         if (angleLocation == angle) return true
 
@@ -140,10 +143,11 @@ open class BasicStepperRotator(
     }
 
     /**
-     * TODO is this really necessary?
+     * Allows for "re-calibration" of the stepper to the "0" position.
      */
-    fun reset() {
+    override fun reset() {
         stepsLocation = 0
+        angleLocation = 0
     }
 }
 

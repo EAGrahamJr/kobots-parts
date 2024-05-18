@@ -97,14 +97,17 @@ open class StepperLinearActuator(
     val maxSteps: Int,
     val reversed: Boolean = false,
     val stepStyle: StepStyle = StepStyle.SINGLE
-) : LinearActuator {
+) : LinearActuator, StepperActuator {
 
-    private val pct2Steps = (0..100).map { pct -> pct to (pct * maxSteps / 100f).roundToInt() }.toMap()
+    protected val pct2Steps = (0..100).map { pct -> pct to (pct * maxSteps / 100f).roundToInt() }.toMap()
 
-    private var currentSteps: Int = 0
-    private var currentPercent: Int = 0
+    protected var currentSteps: Int = 0
+    protected var currentPercent: Int = 0
 
     override fun extendTo(percentage: Int): Boolean {
+        // checks things
+        if (limitCheck(percentage)) return true
+
         // out of range or already there
         if (percentage < 0 || percentage > 100 || percentage == currentPercent) return true
 
@@ -139,5 +142,13 @@ open class StepperLinearActuator(
 
     override fun current() = (currentSteps * 100f / maxSteps).roundToInt().coerceIn(0..100)
 
-    open fun release() = theStepper.release()
+    override fun release() = theStepper.release()
+
+    /**
+     * Allows for "re-calibration" of the stepper to the "0" position.
+     */
+    override fun reset() {
+        currentSteps = 0
+        currentPercent = 0
+    }
 }

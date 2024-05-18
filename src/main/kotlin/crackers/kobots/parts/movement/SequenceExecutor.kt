@@ -98,6 +98,8 @@ abstract class SequenceExecutor(
         }
     }
 
+    infix fun does(actionSequence: ActionSequence) = handleRequest(SequenceRequest(actionSequence))
+
     /**
      * Executes the sequence in a separate thread. N.B. the sequence should only contain the devices/actions that
      * this handler can control.

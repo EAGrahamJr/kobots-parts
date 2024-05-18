@@ -38,6 +38,31 @@ interface Actuator<M : Movement> {
 }
 
 /**
+ * Additional actions for an actuator that uses steppers.
+ */
+interface StepperActuator {
+    /**
+     * Release the stepper: this is to prevent over-heating
+     */
+    fun release()
+
+    /**
+     * Allows for "re-calibration" of the stepper's position.
+     */
+    fun reset()
+
+    /**
+     * This should be called as part of the movement to check whether the stepper is at limits or not. The requested
+     * [whereTo] is supplied so that the check can determine what might be happening.
+     *
+     * Note that this also allows the actuator to "reset" any internal variables to keep a more accurate position.
+     *
+     * @return `true` if the limit has been reached
+     */
+    fun limitCheck(whereTo: Int): Boolean = false
+}
+
+/**
  * Describes where to go as a rotational angle. A [stopCheck] function may also be supplied to terminate movement
  * **prior** to reaching the desired [angle]. An `Actuator` may or may not be limited in its range of motion, so the
  * [angle] should be tailored to fit.
@@ -60,12 +85,3 @@ open class LinearMovement(
         require(percentage in 0..100) { "percentage must be between 0 and 100" }
     }
 }
-
-/**
- * Simple "open/close" movement. A [stopCheck] function may also be supplied to terminate movement **prior**
- * to attempting movement.
- */
-open class OpenCloseMovement(
-    val open: Boolean,
-    override val stopCheck: () -> Boolean = { false }
-) : Movement
