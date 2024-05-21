@@ -72,23 +72,17 @@ open class BasicStepperRotator(
     val stepStyle: StepStyle = StepStyle.SINGLE
 ) : Rotator, StepperActuator {
 
-    private val maxSteps: Float
-
     private val degreesToSteps: Map<Int, Int>
     private val stepsToDegrees = mutableMapOf<Int, MutableList<Int>>()
 
     init {
         require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero." }
-        maxSteps = theStepper.stepsPerRotation / gearRatio
+        val stepRatio = theStepper.stepsPerRotation * gearRatio / 360
 
         // calculate how many steps off of "zero" each degree is
         degreesToSteps = (0..359).map { deg: Int ->
-            val steps = (maxSteps * deg / 360).roundToInt()
-            stepsToDegrees.compute(steps) { _, v ->
-                val theList = v ?: mutableListOf()
-                theList += deg
-                theList
-            }
+            val steps = (deg * stepRatio).roundToInt()
+            stepsToDegrees.compute(steps) { _, v -> (v ?: mutableListOf()).apply { add(deg) } }
             deg to steps
         }.toMap()
     }

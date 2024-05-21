@@ -53,7 +53,7 @@ class RotatorTest : FunSpec(
              * The gear ratio is 1:1 and the stepper motor has 200 steps per rotation. The rotator is set to move from
              * 0 to 360 degrees, and it's starting position is assumed to be 0 degrees. The target angle is 83 degrees.
              */
-            test("max steps < 360, 1:1 gear ratio") {
+            test("stepper 200, 1:1 gear ratio, 83 deg") {
                 every { mockStepper.stepsPerRotation } answers { 200 }
                 val rotor = BasicStepperRotator(mockStepper)
 
@@ -64,12 +64,12 @@ class RotatorTest : FunSpec(
             }
 
             /**
-             * With a gear ratio of 1:1.11 and the motor has 200 steps per rotation. The rotator is to be moved 90
+             * With a gear ratio of .9 and the motor has 200 steps per rotation. The rotator is to be moved 90
              * degrees in a forward direction. The stepper is currently at 0 degrees.
              */
-            test("max steps < 360, 1:11:1 gear ratio") {
+            test("steooer 200, .9 gear ratio, 90 deg") {
                 every { mockStepper.stepsPerRotation } answers { 200 }
-                val rotor = BasicStepperRotator(mockStepper, 1.11f)
+                val rotor = BasicStepperRotator(mockStepper, .9f)
 
                 rotor.test(90)
                 verify(exactly = 45) {
@@ -78,15 +78,30 @@ class RotatorTest : FunSpec(
             }
 
             /**
-             * Motor has 2048 steps per rotation and a gear ratio of 1.28 (simulated from real-world). The target is
+             * With a gear ratio of 2.5 and the motor has 200 steps per rotation. The rotator is to be moved 45
+             * degrees in a forward direction. The stepper is currently at 0 degrees.
+             */
+            test("stepper 200, 2.5 gear ratio, 45 deg") {
+                every { mockStepper.stepsPerRotation } answers { 200 }
+
+                val rotor = BasicStepperRotator(mockStepper, 2.5f)
+
+                rotor.test(45)
+                verify(atMost = 63, atLeast = 62) {
+                    mockStepper.step(StepperMotorInterface.Direction.FORWARD, any())
+                }
+            }
+
+            /**
+             * Motor has 2048 steps per rotation and a gear ratio of .78 (simulated from real-world). The target is
              * 90 degrees.
              */
-            test("max steps > 360, 1.28:1 gear ratio") {
+            test("stepper 2048, .78 gear ratio, 90 deg") {
                 every { mockStepper.stepsPerRotation } answers { 2048 }
-                val rotor = BasicStepperRotator(mockStepper, 1.28f)
+                val rotor = BasicStepperRotator(mockStepper, .78f)
 
                 rotor.test(90)
-                verify(exactly = 400) {
+                verify(atLeast = 398, atMost = 400) {
                     mockStepper.step(StepperMotorInterface.Direction.FORWARD, any())
                 }
             }
