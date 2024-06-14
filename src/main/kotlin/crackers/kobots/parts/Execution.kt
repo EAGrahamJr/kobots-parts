@@ -1,5 +1,6 @@
 package crackers.kobots.parts
 
+import com.diozero.util.SleepUtil
 import java.time.Duration
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -50,3 +51,13 @@ fun ScheduledExecutorService.scheduleWithFixedDelay(
  */
 fun ScheduledExecutorService.scheduleWithDelay(delay: kotlin.time.Duration, command: () -> Unit) =
     scheduleWithFixedDelay(delay, delay, command)
+
+/**
+ * Extension function to use a duration for sleeping.
+ */
+fun Duration.sleep() = SleepUtil.busySleep(toNanos())
+
+/**
+ * Extension function to use a duration for sleeping.
+ */
+fun kotlin.time.Duration.sleep() = SleepUtil.busySleep(inWholeNanoseconds)

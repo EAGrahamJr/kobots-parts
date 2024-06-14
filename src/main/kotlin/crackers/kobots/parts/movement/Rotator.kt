@@ -61,7 +61,9 @@ interface Rotator : Actuator<RotationMovement> {
  * desired rotation. Each movement is executed as a single step of the motor.
  *
  * **NOTE** The accuracy of the movement is dependent on rounding errors in the calculation of the number of steps
- * required to reach the destination. The _timing_ of each step may also affect if the motor receives the pulse or not.
+ * required to reach the destination. The _timing_ of each step may also affect if the motor receives the pulse or
+ * not. The intent of this "device" is to be _repeatable_. Note that [stepStyle] and [stepsPerRotation] (default to
+ * single-stepping and the native rotation of the stepper) should be adjusted.
  *
  * [theStepper] _should_ be "released" after use to avoid motor burnout and to allow for "re-calibration" if necessary.
  */
@@ -69,17 +71,19 @@ open class BasicStepperRotator(
     private val theStepper: BasicStepperMotor,
     gearRatio: Float = 1f,
     reversed: Boolean = false,
-    val stepStyle: StepStyle = StepStyle.SINGLE
+    val stepStyle: StepStyle = StepStyle.SINGLE,
+    stepsPerRotation: Int = theStepper.stepsPerRotation.toInt()
 ) : Rotator, StepperActuator {
 
-    private val degreesToSteps: Map<Int, Int>
-    private val stepsToDegrees = mutableMapOf<Int, MutableList<Int>>()
+    protected val degreesToSteps: Map<Int, Int>
+    protected val stepsToDegrees: Map<Int, MutableList<Int>>
 
     init {
         require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero." }
-        val stepRatio = theStepper.stepsPerRotation * gearRatio / 360
+        val stepRatio = stepsPerRotation * gearRatio / 360
 
         // calculate how many steps off of "zero" each degree is
+        stepsToDegrees = mutableMapOf()
         degreesToSteps = (0..359).map { deg: Int ->
             val steps = (deg * stepRatio).roundToInt()
             stepsToDegrees.compute(steps) { _, v -> (v ?: mutableListOf()).apply { add(deg) } }
@@ -87,8 +91,8 @@ open class BasicStepperRotator(
         }.toMap()
     }
 
-    private val forwardDirection = if (reversed) BACKWARD else FORWARD
-    private val backwardDirection = if (reversed) FORWARD else BACKWARD
+    protected val forwardDirection = if (reversed) BACKWARD else FORWARD
+    protected val backwardDirection = if (reversed) FORWARD else BACKWARD
 
     /**
      * Pass through to release the stepper when it's not directly available.
