@@ -232,7 +232,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
      *
      * TODO should this be public?
      */
-    internal fun addTopicListener(topic: String, listener: (String, ByteArray) -> Unit) {
+    fun addTopicListener(topic: String, listener: (String, ByteArray) -> Unit) {
         val sub = MqttSubscription(topic, 0)
         // STUPID FUCKING BUG!!!!
         val props = MqttProperties().apply {

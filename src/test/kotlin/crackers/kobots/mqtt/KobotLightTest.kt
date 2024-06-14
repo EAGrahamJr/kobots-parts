@@ -1,7 +1,10 @@
 package crackers.kobots.mqtt
 
 import crackers.kobots.app.AppCommon.mqttClient
-import crackers.kobots.mqtt.homeassistant.*
+import crackers.kobots.mqtt.homeassistant.DeviceIdentifier
+import crackers.kobots.mqtt.homeassistant.KobotLight
+import crackers.kobots.mqtt.homeassistant.LightController
+import crackers.kobots.mqtt.homeassistant.LightState
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -10,8 +13,7 @@ import io.mockk.mockk
 import org.json.JSONArray
 import org.json.JSONObject
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.containers.Network
-import org.testcontainers.containers.wait.strategy.HostPortWaitStrategy
+import java.awt.Color
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -20,29 +22,29 @@ class KobotLightTest : FunSpec(testGuts())
 private fun testGuts(): FunSpec.() -> Unit = {
     lateinit var broker: GenericContainer<*>
 
-    beforeSpec {
-        broker = GenericContainer("eclipse-mosquitto").apply {
-            setCommand("mosquitto -c /mosquitto-no-auth.conf")
-            withLabel("name", "mosquitto")
-            withExposedPorts(1883)
-            withNetwork(Network.SHARED)
-            start()
-            println("Staring broker")
-            waitingFor(HostPortWaitStrategy().forPorts(1883))
-        }
-        val mappedPort = broker.getMappedPort(1883)
-        System.setProperty("mqtt.broker", "tcp://localhost:$mappedPort")
-        println("Broker running on port $mappedPort")
-    }
-
-    afterSpec {
-        println("Stopping broker")
-        broker.stop()
-    }
+//    beforeSpec {
+//        broker = GenericContainer("eclipse-mosquitto").apply {
+//            setCommand("mosquitto -c /mosquitto-no-auth.conf")
+//            withLabel("name", "mosquitto")
+//            withExposedPorts(1883)
+//            withNetwork(Network.SHARED)
+//            start()
+//            println("Staring broker")
+//            waitingFor(HostPortWaitStrategy().forPorts(1883))
+//        }
+//        val mappedPort = broker.getMappedPort(1883)
+//        System.setProperty("mqtt.broker", "tcp://localhost:$mappedPort")
+//        println("Broker running on port $mappedPort")
+//    }
+//
+//    afterSpec {
+//        println("Stopping broker")
+//        broker.stop()
+//    }
 
     xtest("Setup a single light and verify discovery message") {
         val controller = mockk<LightController>()
-        val initialState = LightState(brightness = 255, color = LightColor(255, 255, 255))
+        val initialState = LightState(brightness = 255, color = Color.WHITE)
         every { controller.current() } returns initialState
 
         // listen for discovery messages

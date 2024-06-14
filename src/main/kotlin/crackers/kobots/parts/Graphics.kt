@@ -1,9 +1,12 @@
 package crackers.kobots.parts
 
 import java.awt.Color
+import java.awt.Font
+import java.awt.Graphics2D
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /**
  * Note this only extracts the HSB _hue_ component of the color.
@@ -46,9 +49,10 @@ fun Double.colorLimit() = this.roundToInt().colorLimit()
 fun Int.colorLimit() = this.coerceIn(0, 255)
 
 /**
- * Convert a temperature in Kelvin to an RGB color.
+ * Convert a temperature in Kelvin to an RGB color. **THIS IS NOT ACCURATE!!!**
  *
  * This is based on the algorithm from https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html
+ * Note that round-tripping between this and the inverse function does not work.
  */
 fun Int.kelvinToRGB(): Color {
     var red: Double
@@ -81,22 +85,50 @@ fun Int.kelvinToRGB(): Color {
 /**
  * Convert a color to a Kelvin temperature. **THIS IS NOT ACCURATE!!!**
  *
- * This is based on the algorithm from https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html
+ * Note that round-tripping between this and the inverse function does not work.
  */
 fun Color.toKelvin(): Int {
+    // Convert RGB to XYZ using the sRGB color space
     val r = red / 255.0
     val g = green / 255.0
     val b = blue / 255.0
 
-    val x = 0.4124 * r + 0.3576 * g + 0.1805 * b
-    val y = 0.2126 * r + 0.7152 * g + 0.0722 * b
-    val z = 0.0193 * r + 0.1192 * g + 0.9505 * b
+    val rLinear = if (r > 0.04045) ((r + 0.055) / (1.055)).pow(2.4) else r / 12.92
+    val gLinear = if (g > 0.04045) ((g + 0.055) / (1.055)).pow(2.4) else g / 12.92
+    val bLinear = if (b > 0.04045) ((b + 0.055) / (1.055)).pow(2.4) else b / 12.92
 
-    val n = (x - 0.3320) / (0.1858 - y + 0.3320)
-    val cct = 449.0 * n.pow(3.0) + 3525.0 * n.pow(2.0) + 6823.3 * n + 5520.33
+    val x = rLinear * 0.4124 + gLinear * 0.3576 + bLinear * 0.1805
+    val y = rLinear * 0.2126 + gLinear * 0.7152 + bLinear * 0.0722
+    val z = rLinear * 0.0193 + gLinear * 0.1192 + bLinear * 0.9505
+
+    // Convert XYZ to CCT
+    val n = (x - 0.3320) / (0.1858 - y)
+    val cct = 449.0 * n.pow(3) + 3525.0 * n.pow(2) + 6823.3 * n + 5520.33
+
     return cct.roundToInt()
 }
 
+fun Int.squared() = toDouble().pow(2).toInt()
+
+/**
+ * Additional math to convert to _mired_ values.
+ */
+fun Color.toMireds(): Int = 1_000_000 / toKelvin()
+fun Int.miredsToColor(): Color = (1_000_000 / this).kelvinToRGB()
+
+fun Color.toLuminance() = (0.2126 * red + 0.7152 * green + 0.0722 * blue)
+fun Color.toLuminancePerceived() = (0.299 * red + 0.587 * green + 0.114 * blue)
+fun Color.toLuminancePerceived2() = sqrt(0.299 * red.squared() + 0.587 * green.squared() + 0.114 * blue.squared())
+
 val PURPLE = Color(0xB4, 0, 0xFF)
 val GOLDENROD = Color(255, 150, 0)
-val ORANGISH = Color(255, 130, 0)
+val ORANGISH = Color(255, 75, 0)
+
+/**
+ * Fits a font to a specified number of pixels.
+ */
+fun Graphics2D.fitFont(f: Font, h: Int): Font {
+    val nextFont = f.deriveFont(f.size + .5f)
+    val fm = getFontMetrics(nextFont)
+    return if (fm.height > h) f else fitFont(nextFont, h)
+}

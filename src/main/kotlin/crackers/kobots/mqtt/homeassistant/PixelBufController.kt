@@ -2,7 +2,6 @@ package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.devices.lighting.PixelBuf
 import crackers.kobots.devices.lighting.WS2811
-import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.util.concurrent.CompletableFuture
@@ -12,6 +11,7 @@ import kotlin.math.roundToInt
 /**
  * Simple HomeAssistant "light" that controls a single pixel on a 1->n `PixelBuf` strand (e.g. a WS28xx LED). Note
  * that the effects **must** be in the context of a `PixelBuf` target.
+ * TODO this should be just a PixelBufController with the start==end index
  */
 class SinglePixelLightController(
     private val theStrand: PixelBuf,
@@ -32,7 +32,7 @@ class SinglePixelLightController(
         return LightState(
             state = state,
             brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
-            color = lastColor.color.toLightColor(),
+            color = lastColor.color,
             effect = currentEffect.get()
         )
     }
@@ -66,6 +66,7 @@ class SinglePixelLightController(
 
 /**
  * Controls a full "strand" of `PixelBuf` (e.g. WS28xx LEDs)
+ * TODO needs a start and end index
  */
 class PixelBufController(
     private val theStrand: PixelBuf,
@@ -101,11 +102,11 @@ class PixelBufController(
     }
 
     override fun current(): LightState {
-        val state = theStrand.get().find { it.color != Color.BLACK }?.let { true } ?: false
+        val state = theStrand.get().any { it.color != Color.BLACK }
         return LightState(
             state = state,
             brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
-            color = lastColor.color.toLightColor(),
+            color = lastColor.color,
             effect = currentEffect.get()
         )
     }

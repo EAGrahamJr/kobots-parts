@@ -1,7 +1,6 @@
 package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.devices.lighting.PimoroniLEDShim
-import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import crackers.kobots.parts.scale
 import java.awt.Color
 import java.util.concurrent.CompletableFuture
@@ -55,7 +54,7 @@ class PimoroniShimController(private val device: PimoroniLEDShim) : LightControl
     override fun current(): LightState = LightState(
         state = currentState.get(),
         brightness = currentBrightness.get(),
-        color = currentColor.get().toLightColor(),
+        color = currentColor.get(),
         effect = currentEffect.get()
     )
 }
