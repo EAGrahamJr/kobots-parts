@@ -18,7 +18,9 @@ There are three main sections.
 
 Javadocs are published at the [GitHub Pages](https://eagrahamjr.github.io/kobots-parts/) for this project.
 
+## Acknowledgements
 
+- The `MatrixRain` class was inspired heavily by [pymatrix-rain](https://github.com/tech-chad/pymatrix-rain), under the MIT License.
 
 ## Other Stuff
 
