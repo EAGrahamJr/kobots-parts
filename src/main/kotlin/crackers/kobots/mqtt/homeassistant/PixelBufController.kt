@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
 class SinglePixelLightController(
     private val theStrand: PixelBuf,
     private val index: Int,
-    private val effects: Map<String, PixelBuf.(index: Int) -> Any>? = null
+    private val effects: Map<String, (PixelBuf, Int) -> Any>? = null
 ) : LightController {
 
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
@@ -86,7 +86,7 @@ class SinglePixelLightController(
  */
 class PixelBufController(
     private val theStrand: PixelBuf,
-    private val effects: Map<String, PixelBuf.() -> Any>? = null
+    private val effects: Map<String, (PixelBuf) -> Any>? = null
 ) : LightController {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
     override val lightEffects = effects?.keys?.sorted()
