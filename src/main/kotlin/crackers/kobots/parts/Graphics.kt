@@ -17,8 +17,6 @@
 package crackers.kobots.parts
 
 import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics2D
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -139,12 +137,3 @@ fun Color.toLuminancePerceived2() = sqrt(0.299 * red.squared() + 0.587 * green.s
 val PURPLE = Color(0xB4, 0, 0xFF)
 val GOLDENROD = Color(255, 150, 0)
 val ORANGISH = Color(255, 75, 0)
-
-/**
- * Fits a font to a specified number of pixels.
- */
-fun Graphics2D.fitFont(f: Font, h: Int): Font {
-    val nextFont = f.deriveFont(f.size + .5f)
-    val fm = getFontMetrics(nextFont)
-    return if (fm.height > h) f else fitFont(nextFont, h)
-}

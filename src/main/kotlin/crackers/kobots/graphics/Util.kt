@@ -18,17 +18,30 @@ package crackers.kobots.graphics
 
 import java.awt.Font
 import java.awt.FontMetrics
+import java.awt.Graphics2D
 import java.awt.Polygon
 import javax.imageio.ImageIO
+import kotlin.math.max
 
 /*
  * Stuff for more complex graphics beyond what's shared with LEDs
  */
 
 /**
- * Use font metrics to center some text in an area
+ * Use font metrics to center some text horizontally in an area
  */
-fun FontMetrics.center(text: String, width: Int) = kotlin.math.max((width - stringWidth(text)) / 2, 0)
+fun FontMetrics.center(text: String, width: Int) = max((width - stringWidth(text)) / 2, 0)
+
+/**
+ * Use font metrics to center some text vertically in an area.
+ */
+fun FontMetrics.middle(verticalHeight: Int) = ascent + (verticalHeight - height) / 2
+
+/**
+ * Use font metrics to get where the baseline of a line would be, with optional spacing.
+ * Assumes [row] is _zero_-based.
+ */
+fun FontMetrics.baseline(row: Int, lineSpacing: Int = 0) = (row * (height + lineSpacing)) + ascent
 
 /**
  * Load an image.
@@ -49,3 +62,12 @@ operator fun Polygon.plus(v: Pair<Int, Int>): Polygon = this.apply { addPoint(v.
  * Don't know if this will be useful anywhere else, but is used a lot in graphics.
  */
 fun Int.toRadians() = Math.toRadians(this.toDouble())
+
+/**
+ * Fits a font to a specified number of pixels.
+ */
+fun Graphics2D.fitFont(f: Font, h: Int): Font {
+    val nextFont = f.deriveFont(f.size + .5f)
+    val fm = getFontMetrics(nextFont)
+    return if (fm.height > h) f else fitFont(nextFont, h)
+}
