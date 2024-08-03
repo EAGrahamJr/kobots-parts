@@ -17,10 +17,7 @@
 package crackers.kobots
 
 import crackers.kobots.graphics.animation.MatrixRain
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.Font
-import java.awt.Graphics2D
+import java.awt.*
 import java.awt.image.BufferedImage
 import javax.swing.ImageIcon
 import javax.swing.JFrame
@@ -48,7 +45,7 @@ fun main() {
         800,
         400,
         displayFont = Font(Font.SANS_SERIF, Font.PLAIN, 8),
-        useBold = false
+        leadColor = Color.WHITE.darker()
     ).apply {
         start(frame::repaint)
     }
