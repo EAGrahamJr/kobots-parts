@@ -26,7 +26,6 @@ import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
 import java.util.concurrent.Future
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random.Default.nextInt
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -74,32 +73,32 @@ class MatrixRain(
 
     private inner class LineOfStuff(val column: Int) {
         private val length = nextInt(3, maxRows)
-        private val leadRow = AtomicInteger(0)
-        private val row = AtomicInteger(-1)
-        private val lastRow = AtomicInteger(-length)
+        private var leadRow = 0
+        private var row = -1
+        private var lastRow = -length
 
-        fun getLead() = if (leadRow.get() > maxRows) null else leadRow.getAndIncrement()
+        fun getLead() = if (leadRow > maxRows) null else leadRow++
         fun getNext() = when {
-            row.get() < 0 -> {
-                row.incrementAndGet()
+            row < 0 -> {
+                row++
                 null
             }
 
-            row.get() > maxRows -> null
-            else -> row.getAndIncrement()
+            row > maxRows -> null
+            else -> row++
         }
 
         fun deleteLast() = when {
             okToDelete() -> null
-            lastRow.get() < 0 -> {
-                lastRow.incrementAndGet()
+            lastRow < 0 -> {
+                lastRow++
                 null
             }
 
-            else -> lastRow.getAndIncrement()
+            else -> lastRow++
         }
 
-        fun okToDelete() = lastRow.get() > maxRows
+        fun okToDelete() = lastRow > maxRows
     }
 
     private fun context(block: () -> Unit) {
@@ -115,6 +114,8 @@ class MatrixRain(
                 color = normalColor
                 background = backgroundColor
                 block()
+            } catch (t: Throwable) {
+                logger.error("Error in render: ${t.localizedMessage}")
             } finally {
                 font = oldFont
                 color = oldColor
@@ -126,8 +127,9 @@ class MatrixRain(
 
     private val lineList = mutableListOf<LineOfStuff>()
     private fun aLoop() = context {
-        // add any new lines if we don't have any and there are more than 3 available
-        if (lineList.size < maxColumns && availableColumns.size > 3) {
+        // add any new lines if we don't have any and there are more than 20% (or 1) available
+        val sizeCheck = (availableColumns.size > maxColumns * .2) || availableColumns.size > 1
+        if (lineList.size < maxColumns && sizeCheck) {
             repeat(2) {
                 availableColumns.shuffle()
                 val x = availableColumns.removeAt(0)
@@ -139,12 +141,7 @@ class MatrixRain(
             // where characters in this line will start
             val lineX = line.column * cellWidth
 
-            line.deleteLast()?.let { lineRow ->
-                lineX.clearCell(lineRow)
-                if (line.column !in availableColumns) {
-                    availableColumns.add(line.column)
-                }
-            }
+            line.deleteLast()?.let { lineRow -> lineX.clearCell(lineRow) }
 
             line.getNext()?.let { lineRow ->
                 lineX.clearCell(lineRow)
@@ -162,19 +159,16 @@ class MatrixRain(
                     font = displayFont
                     color = normalColor
                 }
-                val y = lineRow * fontMetrics.height + fontMetrics.ascent
-                // draw random char at new location
-                drawString(CHAR_LIST.random(), lineX, y)
+                drawMatrixChar(lineRow, lineX)
             }
 
             line.getLead()?.let { lineRow ->
                 lineX.clearCell(lineRow)
 
-                // draw the lead character using the lead color, normal font
+                // draw the lead character using the lead color, BOLD font
                 color = leadColor
                 font = displayFont.deriveFont(Font.BOLD)
-                val y = lineRow * fontMetrics.height + fontMetrics.ascent
-                drawString(CHAR_LIST.random(), lineX, y)
+                drawMatrixChar(lineRow, lineX)
             }
 
             if (line.okToDelete()) {
@@ -188,6 +182,12 @@ class MatrixRain(
     private fun Int.clearCell(row: Int) {
         val topOfLine = row * graphics.fontMetrics.height
         graphics.clearRect(this, topOfLine, cellWidth, graphics.fontMetrics.height)
+    }
+
+    private fun Graphics2D.drawMatrixChar(lineRow: Int, lineX: Int) {
+        val newChar = CHAR_LIST.random()
+        val y = lineRow * fontMetrics.height + fontMetrics.ascent
+        drawString(newChar, lineX, y)
     }
 
     private var future: Future<*>? = null
@@ -207,6 +207,8 @@ class MatrixRain(
             refresh()
         }
     }
+
+    fun running(): Boolean = future != null
 
     /**
      * Stop it -- and then make sure it's stopped
