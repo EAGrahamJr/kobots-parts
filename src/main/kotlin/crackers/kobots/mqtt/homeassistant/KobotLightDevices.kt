@@ -137,10 +137,10 @@ open class KobotLight(
 
     override fun discovery() = super.discovery().apply {
         put("brightness", true)
-        controller.lightEffects?.let {
-            put("effect", true)
-            put("effect_list", it.sorted())
-        }
+//        controller.lightEffects?.let {
+//            put("effect", true)
+//            put("effect_list", it.sorted())
+//        }
     }
 
     override fun currentState() = controller.current().json().toString()
@@ -157,7 +157,8 @@ open class KobotLight(
         theFuture?.cancel(true)
 
         if (effect != null) {
-            theFuture = controller.lightEffects?.takeIf { effect in it }?.let { controller exec effect }
+            TODO("Effects are not enabled due to thread management")
+//            theFuture = controller.lightEffects?.takeIf { effect in it }?.let { controller exec effect }
         } else {
             controller set this
         }
@@ -171,7 +172,7 @@ open class KobotLight(
  */
 open class KobotRGBLight(
     uniqueId: String,
-    val controller: LightController,
+    controller: LightController,
     name: String,
     deviceIdentifier: DeviceIdentifier
 ) : KobotLight(uniqueId, controller, name, deviceIdentifier) {
