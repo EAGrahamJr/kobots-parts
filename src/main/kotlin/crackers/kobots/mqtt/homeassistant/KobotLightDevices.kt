@@ -94,7 +94,7 @@ data class LightCommand(
     val state: Boolean,
     val brightness: Int?,
     val color: Color?,
-    val effect: String? = null
+    val effect: String?
 ) {
     companion object {
         fun JSONObject.commandFrom(): LightCommand = with(this) {

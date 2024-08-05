@@ -28,17 +28,15 @@ import io.mockk.every
 import io.mockk.mockk
 import org.json.JSONArray
 import org.json.JSONObject
+import org.testcontainers.containers.GenericContainer
 import java.awt.Color
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/**
- * TODO attempt to use docker container as broker
- */
 class KobotLightTest : FunSpec(testGuts())
 
 private fun testGuts(): FunSpec.() -> Unit = {
-//    lateinit var broker: GenericContainer<*>
+    lateinit var broker: GenericContainer<*>
 
 //    beforeSpec {
 //        broker = GenericContainer("eclipse-mosquitto").apply {

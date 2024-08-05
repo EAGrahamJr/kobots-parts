@@ -39,7 +39,8 @@ dependencies {
 
     testImplementation("io.kotest:kotest-runner-junit5:5.6.2")
     testImplementation("io.mockk:mockk:1.13.5")
-    testImplementation("ch.qos.logback:logback-classic:1.4.14")
+    testImplementation("org.testcontainers:testcontainers:1.19.3")
+    testImplementation("ch.qos.logback:logback-classic:1.4.12")
 
     // re-create all the depndencies for testing
     testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
