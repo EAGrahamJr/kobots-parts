@@ -65,9 +65,9 @@ Only a single actuator is currently defined:
 
 ## Sequence Executor
 
-The [SequenceExecutor](src/main/kotlin/crackers/kobots/parts/SequenceExecutor.kt) provides one means of executing sequences and actions. It is primarily intended to be used with the [Event Bus](EventBus.md).
+The [SequenceExecutor](src/main/kotlin/crackers/kobots/parts/SequenceExecutor.kt) provides one means of executing sequences and actions.
 
-This class provides a means to execute sequences in a _background thread_. The actions are executed sequentially, invoking the _stopCheck_ functions prior to moving each component, as well as providing a mans of signalling an _immediate_ stop. The actions are executed in a way to provide pauses between invocations: this allows the physical systems to move incrementally, reducing stress (this speed can obviously be modified). The actual spped a step can execute will be limited by the hardware I/O.
+This class provides functions to execute sequences in a _background thread_. The actions are executed sequentially, invoking the _stopCheck_ functions prior to moving each component, as well as providing a mans of signalling an _immediate_ stop. The actions are executed in a way to provide pauses between invocations: this allows the physical systems to move incrementally, reducing stress (this speed can obviously be modified). The actual spped a step can execute will be limited by the hardware I/O.
 
 Implementations of this class **MUST** handle any device or I/O contention -- this class does not provide any "locking" of devices.
 
