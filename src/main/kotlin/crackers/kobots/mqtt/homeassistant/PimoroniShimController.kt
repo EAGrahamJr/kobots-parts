@@ -19,7 +19,6 @@ package crackers.kobots.mqtt.homeassistant
 import crackers.kobots.devices.lighting.PimoroniLEDShim
 import crackers.kobots.parts.scale
 import java.awt.Color
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -63,7 +62,7 @@ class PimoroniShimController(private val device: PimoroniLEDShim) : LightControl
         }
     }
 
-    override fun exec(effect: String): CompletableFuture<Void> {
+    override fun exec(effect: String) {
         TODO("Not yet implemented")
     }
 

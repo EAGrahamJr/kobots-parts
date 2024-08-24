@@ -20,7 +20,6 @@ import crackers.kobots.devices.lighting.PixelBuf
 import crackers.kobots.devices.lighting.WS2811
 import org.slf4j.LoggerFactory
 import java.awt.Color
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 
@@ -67,16 +66,6 @@ class SinglePixelLightController(
         val color = command.color ?: currentColor.color
         lastColor = WS2811.PixelColor(color, brightness = cb)
         theStrand[index] = lastColor
-    }
-
-    override fun exec(effect: String) = CompletableFuture.runAsync {
-        try {
-            effects?.get(effect)?.invoke(theStrand, index)?.also { currentEffect.set(effect) }
-        } catch (t: Throwable) {
-            logger.error("Error executing effect $effect", t)
-        }
-    }.whenComplete { _, _ ->
-        currentEffect.set(null)
     }
 }
 
@@ -125,15 +114,5 @@ class PixelBufController(
             color = lastColor.color,
             effect = currentEffect.get()
         )
-    }
-
-    override fun exec(effect: String) = CompletableFuture.runAsync {
-        try {
-            effects?.get(effect)?.invoke(theStrand)?.also { currentEffect.set(effect) }
-        } catch (t: Throwable) {
-            logger.error("Error executing effect $effect", t)
-        }
-    }.whenComplete { _, _ ->
-        currentEffect.set(null)
     }
 }

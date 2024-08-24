@@ -23,8 +23,6 @@ import crackers.kobots.parts.toMireds
 import org.json.JSONObject
 import java.awt.Color
 import java.awt.Color.BLACK
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 
 /*
@@ -94,12 +92,17 @@ data class LightCommand(
     val state: Boolean,
     val brightness: Int?,
     val color: Color?,
-    val effect: String?
+    val effect: String?,
+    val flash: Int,
+    val transition: Float
 ) {
     companion object {
         fun JSONObject.commandFrom(): LightCommand = with(this) {
             var state = optString("state", null)?.let { it == "ON" } ?: false
+            // extract the effect: if no effect, see if there's transition or flash
             val effect = optString("effect", null)
+            val flash = if (effect == null) optInt("flash", 0) else 0
+            val trans = if (effect == null && flash != 0) optFloat("transition", 0f) else 0f
 
             // brightness is 0-255, so translate to 0-100
             val brightness = takeIf { has("brightness") }?.let { getInt("brightness") * 100f / 255f }?.roundToInt()
@@ -114,7 +117,7 @@ data class LightCommand(
             // set state regardless
             if (brightness != null || color != null) state = true
 
-            LightCommand(state, brightness, color, effect)
+            LightCommand(state, brightness, color, effect, flash, trans)
         }
     }
 }
@@ -137,30 +140,23 @@ open class KobotLight(
 
     override fun discovery() = super.discovery().apply {
         put("brightness", true)
-//        controller.lightEffects?.let {
-//            put("effect", true)
-//            put("effect_list", it.sorted())
-//        }
+        controller.lightEffects?.let {
+            put("effect", true)
+            put("effect_list", it.sorted())
+        }
     }
 
     override fun currentState() = controller.current().json().toString()
 
-    private val effectFuture = AtomicReference<CompletableFuture<Void>>()
-    private var theFuture: CompletableFuture<Void>? // for pretty
-        get() = effectFuture.get()
-        set(v) {
-            effectFuture.set(v)
-        }
-
-    override fun handleCommand(payload: String) = with(JSONObject(payload).commandFrom()) {
-        // stop any running effect
-        theFuture?.cancel(true)
-
-        if (effect != null) {
-            TODO("Effects are not enabled due to thread management")
-//            theFuture = controller.lightEffects?.takeIf { effect in it }?.let { controller exec effect }
-        } else {
-            controller set this
+    override fun handleCommand(payload: String) {
+        val cmd = JSONObject(payload).commandFrom()
+        // split out specialized support mechanisms for background managements
+        when {
+            !cmd.state -> controller set cmd    // off over-rides anything
+            cmd.effect != null -> controller exec cmd.effect
+            cmd.flash > 0 -> controller flash cmd.flash
+            cmd.transition > 0f -> controller transition cmd
+            else -> controller set cmd
         }
     }
 }
