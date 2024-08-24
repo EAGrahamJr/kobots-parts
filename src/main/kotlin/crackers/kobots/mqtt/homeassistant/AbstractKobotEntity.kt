@@ -26,16 +26,23 @@ import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * What is this thing?
+ * What is this thing? This defines the platform that various entities can be attached to. An example would be a
+ * Raspberry Pi hosting multiple sensors.
+ *
+ * @param manufacturer who made it
+ * @param model what "type" of thing is this
+ * @param identifiers a list of unique identifiers: defaults to the device's `hostname` if availble
+ * @param name the name for the device: defaults to the first `identifier`
  */
 data class DeviceIdentifier @JvmOverloads constructor(
     val manufacturer: String,
     val model: String,
-    val identifier: String = InetAddress.getLocalHost().hostName
+    val identifiers: List<String> = listOf(InetAddress.getLocalHost().hostName),
+    val name: String = identifiers[0]
 ) {
-    fun asJSON(uniqueId: String) = JSONObject()
-        .put("identifiers", listOf(uniqueId, identifier))
-        .put("name", identifier)
+    fun asJSON() = JSONObject()
+        .put("identifiers", identifiers)
+        .put("name", name)
         .put("model", model)
         .put("manufacturer", manufacturer)!!
 }
@@ -130,7 +137,7 @@ abstract class AbstractKobotEntity(
      * so just dump it on the child class to figure it out.
      */
     override fun discovery(): JSONObject = JSONObject().apply {
-        put("device", deviceIdentifier.asJSON(uniqueId))
+        put("device", deviceIdentifier.asJSON())
         put("entity_category", "config")
         put("icon", icon)
         put("name", name)
