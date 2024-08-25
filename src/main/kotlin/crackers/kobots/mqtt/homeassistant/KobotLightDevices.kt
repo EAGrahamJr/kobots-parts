@@ -152,7 +152,7 @@ open class KobotLight(
         val cmd = JSONObject(payload).commandFrom()
         // split out specialized support mechanisms for background managements
         when {
-            !cmd.state -> controller set cmd    // off over-rides anything
+            !cmd.state -> controller set cmd // off over-rides anything
             cmd.effect != null -> controller exec cmd.effect
             cmd.flash > 0 -> controller flash cmd.flash
             cmd.transition > 0f -> controller transition cmd
