@@ -298,10 +298,5 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
          * Sequence events are published to this topic.
          */
         const val KOBOTS_EVENTS = "kobots/events"
-
-        /**
-         * Emergency stops on a separate topic.
-         */
-        private const val KOBOTS_STOP = "kobots/stop"
     }
 }
