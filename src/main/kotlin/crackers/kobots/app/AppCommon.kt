@@ -19,8 +19,6 @@ package crackers.kobots.app
 import com.typesafe.config.ConfigFactory
 import crackers.hassk.HAssKClient
 import crackers.kobots.mqtt.KobotsMQTT
-import crackers.kobots.parts.app.KobotsEvent
-import crackers.kobots.parts.app.publishToTopic
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.util.concurrent.CountDownLatch
@@ -113,16 +111,6 @@ object AppCommon {
     val mqttClient by lazy {
         KobotsMQTT(InetAddress.getLocalHost().hostName, applicationConfig.getString("mqtt.broker"))
     }
-
-    /**
-     * Generic topic and event for sleep/wake events on the internal event bus.
-     */
-    const val SLEEP_TOPIC = "System.Sleep"
-
-    class SleepEvent(val sleep: Boolean) : KobotsEvent
-
-    fun goToSleep() = publishToTopic(SLEEP_TOPIC, SleepEvent(true))
-    fun wakey() = publishToTopic(SLEEP_TOPIC, SleepEvent(false))
 
     fun <F> ignoreErrors(executionBlock: () -> F?, logIt: Boolean = false): F? = try {
         executionBlock()

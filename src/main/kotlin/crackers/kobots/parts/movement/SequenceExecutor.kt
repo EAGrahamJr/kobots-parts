@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Request to execute a sequence of actions.
  */
-class SequenceRequest(val sequence: ActionSequence) : KobotsAction
+class SequenceRequest(val sequence: ActionSequence)
 
 /**
  * Handles running a sequence for a thing. Every sequence is executed on a background thread that runs until
@@ -71,7 +71,7 @@ abstract class SequenceExecutor(
         get() = _stop.get()
         private set(value) = _stop.set(value)
 
-    data class SequenceEvent(val source: String, val sequence: String, val started: Boolean) : KobotsEvent
+    data class SequenceEvent(val source: String, val sequence: String, val started: Boolean)
 
     /**
      * Sets the stop flag and blocks until the flag is cleared.
@@ -90,12 +90,8 @@ abstract class SequenceExecutor(
      *
      * This function is non-blocking.
      */
-    open fun handleRequest(request: KobotsAction) {
-        when (request) {
-            is EmergencyStop -> stopImmediately = true
-            is SequenceRequest -> executeSequence(request)
-            else -> {}
-        }
+    open fun handleRequest(request: SequenceRequest) {
+        executeSequence(request)
     }
 
     infix fun does(actionSequence: ActionSequence) = handleRequest(SequenceRequest(actionSequence))
@@ -117,7 +113,6 @@ abstract class SequenceExecutor(
             // publish start event to the masses
             val startMessage = SequenceEvent(executorName, sequenceName, true)
             mqttClient.publish(KOBOTS_EVENTS, JSONObject(startMessage))
-            publishToTopic(INTERNAL_TOPIC, startMessage)
 
             preExecution()
             try {
@@ -143,7 +138,6 @@ abstract class SequenceExecutor(
             // publish completion event to the masses
             val completedMessage = SequenceEvent(executorName, sequenceName, false)
             mqttClient.publish(KOBOTS_EVENTS, JSONObject(completedMessage))
-            publishToTopic(INTERNAL_TOPIC, completedMessage)
         }
     }
 
