@@ -34,7 +34,7 @@ import kotlin.math.roundToInt
  */
 interface Rotator : Actuator<RotationMovement> {
     /**
-     * Take a "step" towards this destination. Returns `true` if the target has been reached.
+     * Rotate towards the target and return `true` when completed
      */
     override infix fun move(movement: RotationMovement): Boolean {
         return rotateTo(movement.angle)
@@ -62,8 +62,7 @@ interface Rotator : Actuator<RotationMovement> {
  *
  * **NOTE** The accuracy of the movement is dependent on rounding errors in the calculation of the number of steps
  * required to reach the destination. The _timing_ of each step may also affect if the motor receives the pulse or
- * not. The intent of this "device" is to be _repeatable_. Note that [stepStyle] and [stepsPerRotation] (default to
- * single-stepping and the native rotation of the stepper) should be adjusted.
+ * not. The intent of this device is to be _repeatable_.
  *
  * [theStepper] _should_ be "released" after use to avoid motor burnout and to allow for "re-calibration" if necessary.
  */
@@ -105,9 +104,6 @@ open class BasicStepperRotator(
     override fun current(): Int = angleLocation
 
     override fun rotateTo(angle: Int): Boolean {
-        // checks things
-        if (limitCheck(angle)) return true
-
         // first check to see if the angles already match
         if (angleLocation == angle) return true
 
@@ -238,6 +234,7 @@ open class ServoRotator(
 
     private val availableDegrees = degreesToServo.keys.toList()
 
+    // where this thing thinks it is -- internal for testing purposes **only**
     internal var where = physicalRange.first
     override fun current(): Int = where
 
