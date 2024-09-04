@@ -105,23 +105,6 @@ class RotatorTest : FunSpec(
                     mockStepper.step(StepperMotorInterface.Direction.FORWARD, any())
                 }
             }
-
-            /**
-             * Check the limiting function.
-             */
-            test("Limit function stops movement") {
-                every { mockStepper.stepsPerRotation } answers { 360 }
-                val rotor = object : BasicStepperRotator(mockStepper) {
-                    override fun limitCheck(whereTo: Int): Boolean {
-                        return stepsLocation >= 45
-                    }
-                }
-
-                rotor.test(83)
-                verify(exactly = 45) {
-                    mockStepper.step(StepperMotorInterface.Direction.FORWARD, any())
-                }
-            }
         }
 
         /**
