@@ -44,7 +44,7 @@ interface LinearActuator : Actuator<LinearMovement> {
     /**
      * Returns the current position as a percentage of the total range of motion.
      */
-    fun current(): Int
+    override fun current(): Int
 
     /**
      * Operator short-cut for [extendTo].
@@ -105,9 +105,6 @@ open class StepperLinearActuator(
     protected var currentPercent: Int = 0
 
     override fun extendTo(percentage: Int): Boolean {
-        // checks things
-        if (limitCheck(percentage)) return true
-
         // out of range or already there
         if (percentage < 0 || percentage > 100 || percentage == currentPercent) return true
 

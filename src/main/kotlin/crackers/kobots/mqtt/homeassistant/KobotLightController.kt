@@ -17,30 +17,47 @@
 package crackers.kobots.mqtt.homeassistant
 
 import com.diozero.api.PwmOutputDevice
-import crackers.kobots.devices.set
-import java.util.concurrent.CompletableFuture
 import kotlin.math.roundToInt
 
 /**
- * Interface for controlling a light. This is used by [KobotLight] and [KobotLightStrip] to abstract the actual
- * hardware implementation.
+ * Interface for controlling a light. This is used by [KobotLight] to abstract the actual hardware implementation.
+ *
+ * The [exec], [flash], and [transition] functions are specifically called out since they will _usually_ involve some
+ * background tasking to work with this system.
  */
 interface LightController {
     /**
-     * Set the state of the light. Node "0" represents either a single LED or a full LED strand. Non-zero indices are
-     * to address each LED individually, offset by 1.
+     * Set the state of the light.
      */
     infix fun set(command: LightCommand)
 
     /**
-     * Execute an effect in some sort of completable manner. Note this **must** be cancellable since commands can be
-     * compounded.
+     * Execute an effect in some sort of completable manner. Note this **must** be cancellable by any subsequent
+     * commands.
      */
-    infix fun exec(effect: String): CompletableFuture<Void>
+    infix fun exec(effect: String) {
+        // does nothing
+    }
 
     /**
-     * Get the state of the light. Node "0" represents either a single LED or a full LED strand. Non-zero indices are
-     * to address each LED individually, offset by 1.
+     * Flash the light (on/off) using this period (seconds). Continues flashing until another command is received.
+     *
+     * **NOTE** HA is only currently sending either 10 or 2 to signal fast/slow.
+     */
+    infix fun flash(flash: Int) {
+        // does nothing
+    }
+
+    /**
+     * Transition from the current state to a new state. Because this _can_ include color and brightness changes, the
+     * whole parsed command is necessary to complete this function.
+     */
+    infix fun transition(command: LightCommand) {
+        // does nothing
+    }
+
+    /**
+     * Get the state of the light.
      */
     fun current(): LightState
 
@@ -50,29 +67,20 @@ interface LightController {
 }
 
 /**
- * Turns it on and off, adjust brightness. Supports a minimal set of effects.
+ * Turns it on and off, adjust brightness.
  *
- * TODO the effect should include (`n` is a duration)
- *
- * * `blink n` on/off; duration is how long the light stays in that state
- * * `pulse n` gently fade in/out; duration is for a full cycle7
+ * TODO support a minimal set of effects? should support fade-in/out as HA settings?
  */
 class BasicLightController(val device: PwmOutputDevice) : LightController {
     private var currentEffect: String? = null
     override val lightEffects: List<String>? = null
 
     override fun set(command: LightCommand) = with(command) {
-        if (brightness != null) {
-            device.setValue(brightness / 100f)
-        } else {
-            device.set(state)
-        }
-    }
-
-    override fun exec(effect: String): CompletableFuture<Void> {
-        currentEffect = effect
-        return CompletableFuture.runAsync {
-            TODO("No effects yet")
+        // off over-rides everything
+        device.value = when {
+            !state -> 0f
+            brightness != null -> brightness / 100f
+            else -> 1f
         }
     }
 
@@ -81,5 +89,6 @@ class BasicLightController(val device: PwmOutputDevice) : LightController {
         brightness = (device.value * 100f).roundToInt(),
         effect = currentEffect
     )
+
     override val controllerIcon = "mdi:lamp"
 }

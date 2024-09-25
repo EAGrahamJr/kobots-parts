@@ -18,24 +18,25 @@ package crackers.kobots.parts.movement
 
 import crackers.kobots.mqtt.KobotsMQTT
 import crackers.kobots.mqtt.KobotsMQTT.Companion.KOBOTS_EVENTS
-import crackers.kobots.parts.app.*
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Request to execute a sequence of actions.
  */
-class SequenceRequest(val sequence: ActionSequence) : KobotsAction
+class SequenceRequest(val sequence: ActionSequence)
 
 /**
  * Handles running a sequence for a thing. Every sequence is executed on a background thread that runs until
- * completion or until the [stop] method is called or if an [EmergencyStop] is received. Only one sequence can be
- * running at a time (see the [moveInProgress] flag).
+ * completion or until the [stop] method is called. Only one sequence can be running at a time (see the [moveInProgress]
+ * flag).
  *
  * Default execution speeds are:
  * - VERY_SLOW = 100ms
@@ -66,36 +67,34 @@ abstract class SequenceExecutor(
         get() = _moving.get()
         private set(value) = _moving.set(value)
 
-    private val _stop = AtomicBoolean(false)
-    var stopImmediately: Boolean
-        get() = _stop.get()
-        private set(value) = _stop.set(value)
+    data class SequenceEvent(val source: String, val sequence: String, val started: Boolean)
 
-    data class SequenceEvent(val source: String, val sequence: String, val started: Boolean) : KobotsEvent
+    private var stopLatch: CountDownLatch? = null // blech, but better than sleeping
 
     /**
      * Sets the stop flag and blocks until the flag is cleared.
      */
     open fun stop() {
-        stopImmediately = moveInProgress
-        while (stopImmediately) KobotSleep.millis(5)
+        if (moveInProgress) {
+            stopLatch = CountDownLatch(1)
+            // should be quick
+            moveInProgress = false
+            if (!stopLatch!!.await(5, TimeUnit.SECONDS)) {
+                throw IllegalStateException("Execution did not respond to 'stop' invocation.")
+            }
+        }
     }
 
     protected val currentSequence = AtomicReference<String>()
     protected abstract fun canRun(): Boolean
 
     /**
-     * Handles a request. If the request is a sequence, it is executed on a background thread. If the request is an
-     * [EmergencyStop], the [stopImmediately] flag is set.
+     * Handles a request. If the request is a sequence, it is executed on a background thread.
      *
      * This function is non-blocking.
      */
-    open fun handleRequest(request: KobotsAction) {
-        when (request) {
-            is EmergencyStop -> stopImmediately = true
-            is SequenceRequest -> executeSequence(request)
-            else -> {}
-        }
+    open fun handleRequest(request: SequenceRequest) {
+        executeSequence(request)
     }
 
     infix fun does(actionSequence: ActionSequence) = handleRequest(SequenceRequest(actionSequence))
@@ -117,15 +116,12 @@ abstract class SequenceExecutor(
             // publish start event to the masses
             val startMessage = SequenceEvent(executorName, sequenceName, true)
             mqttClient.publish(KOBOTS_EVENTS, JSONObject(startMessage))
-            publishToTopic(INTERNAL_TOPIC, startMessage)
 
             preExecution()
             try {
                 request.sequence.build().forEach { action ->
-                    val maxPause = Duration.ofMillis(action.speed.millis)
-
                     // while can run, not stopping, and the action is not done...
-                    while (canRun() && !stopImmediately && !action.action.step(maxPause)) {
+                    while (canRun() && moveInProgress && !action.action.step(Duration.ofMillis(action.speed.millis))) {
                         updateCurrentState()
                     }
                 }
@@ -138,12 +134,11 @@ abstract class SequenceExecutor(
             // done
             _moving.set(false)
             updateCurrentState()
-            _stop.set(false) // clear emergency stop flag
+            stopLatch?.countDown()
 
             // publish completion event to the masses
             val completedMessage = SequenceEvent(executorName, sequenceName, false)
             mqttClient.publish(KOBOTS_EVENTS, JSONObject(completedMessage))
-            publishToTopic(INTERNAL_TOPIC, completedMessage)
         }
     }
 
@@ -161,11 +156,4 @@ abstract class SequenceExecutor(
      * Optionally updates the state of the executor.
      */
     open fun updateCurrentState() {}
-
-    companion object {
-        const val INTERNAL_TOPIC = "Executor.Sequences"
-
-        @Deprecated("Use KOBOTS_EVENTS instead", ReplaceWith("KOBOTS_EVENTS"))
-        const val MQTT_TOPIC = KOBOTS_EVENTS
-    }
 }

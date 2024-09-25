@@ -15,8 +15,6 @@
  */
 package crackers.kobots.mqtt
 
-import crackers.kobots.parts.app.EmergencyStop
-import crackers.kobots.parts.app.STOP_NOW
 import org.eclipse.paho.mqttv5.client.*
 import org.eclipse.paho.mqttv5.common.MqttException
 import org.eclipse.paho.mqttv5.common.MqttMessage
@@ -31,7 +29,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.system.exitProcess
 
 /**
  * MQTT wrapper for Kobots.
@@ -282,29 +279,6 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
     operator fun set(topic: String, payload: String) = publish(topic, payload.toByteArray())
     operator fun set(topic: String, payload: ByteArray) = publish(topic, payload)
 
-    /**
-     * Set up and allow [EmergencyStop] to forcibly terminate the application. This is intended to allow for a single
-     * "stop" to kill everything listening.
-     *
-     * **NOTE** This uses a separate topic from everything else and should be "private" to this function.
-     */
-    fun allowEmergencyStop() {
-        subscribeJSON(KOBOTS_STOP) { event ->
-            if (event.optString("name") == STOP_NOW) {
-                logger.error("Emergency stop received")
-                close()
-                exitProcess(3)
-            }
-        }
-    }
-
-    /**
-     * Publish an [EmergencyStop] event. This should kill everything listening. See [allowEmergencyStop].
-     */
-    fun emergencyStop() {
-        publish(KOBOTS_STOP, JSONObject(EmergencyStop()))
-    }
-
     override fun close() {
         mqttClient.close()
     }
@@ -324,10 +298,5 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
          * Sequence events are published to this topic.
          */
         const val KOBOTS_EVENTS = "kobots/events"
-
-        /**
-         * Emergency stops on a separate topic.
-         */
-        private const val KOBOTS_STOP = "kobots/stop"
     }
 }

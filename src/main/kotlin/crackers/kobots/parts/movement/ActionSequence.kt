@@ -16,6 +16,7 @@
 
 package crackers.kobots.parts.movement
 
+import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -50,30 +51,43 @@ class LinearMovementBuilder(linear: LinearActuator) : MovementBuilder<LinearMove
 /*
  * Movement, actuator, and builder for executing a code block as a movement.
  */
-private class SimpleMovement(execution: () -> Boolean) : Movement {
-    override val stopCheck = execution
-}
-
-private class SimpleActuator : Actuator<SimpleMovement> {
-    // stop check has the code`
-    override fun move(movement: SimpleMovement) = false
-}
-
 // only need one of these
-private val SIMPLE = SimpleActuator()
+private val SIMPLE = object : Actuator<Movement> {
+    // stop check has the code`
+    override fun move(movement: Movement) = false
+    override fun current() = 0
+}
 
 private class ExecutableMovementBuilder(private val function: () -> Boolean) :
-    MovementBuilder<SimpleMovement, SimpleActuator>(SimpleActuator()) {
-    override fun makeMovement(): SimpleMovement {
-        return SimpleMovement(function)
+    MovementBuilder<Movement, Actuator<Movement>>(SIMPLE) {
+    override fun makeMovement(): Movement {
+        return object : Movement {
+            override val stopCheck = function
+        }
     }
 }
 
+/**
+ * How long each step should take to execute **at a minimum**.
+ */
 interface ActionSpeed {
     val millis: Long
-    fun duration() = millis.toDuration(DurationUnit.MILLISECONDS)
+    fun duration(): Duration = millis.toDuration(DurationUnit.MILLISECONDS)
 }
 
+/**
+ * Makes an [ActionSpeed] in millis from one.
+ */
+fun Long.toSpeed(): ActionSpeed {
+    val v = this
+    return object : ActionSpeed {
+        override val millis = v
+    }
+}
+
+/**
+ * "Default" speeds based on observation.
+ */
 enum class DefaultActionSpeed(override val millis: Long) : ActionSpeed {
     VERY_SLOW(100), SLOW(50), NORMAL(10), FAST(5), VERY_FAST(2)
 }
@@ -202,6 +216,14 @@ class ActionSequence {
     operator fun plus(otherSequence: ActionSequence) = ActionSequence().also {
         it.steps += this.steps
         it.steps += otherSequence.steps
+    }
+
+    /**
+     * Append (add) another action builder to the list of steps. Does not return anything but does modify the
+     * internal list. (Yes, this is contrary to most operators, but it's nicer for DSL.)
+     */
+    operator fun plus(actionBuilder: ActionBuilder) {
+        this.steps += actionBuilder
     }
 
     /**

@@ -7,14 +7,14 @@ Contains basic application construction elements that are being used in my vario
 - Generic application "junk"
 - Abstractions to orchestrate physical device interactions
   - Includes movements and the human stuff
-- A simplified event-bus for in-process communication
-- Wrappers around MQTT for external communications
+- Wrappers around MQTT/HomeAssistant for external communications
 
 There are three main sections.
 
 - [Actuators and Movements](Movements.md)
-- [Event Bus](EventBus.md)
 - [Home Assistant](HomeAssistant.md)
+
+:bangbang: The **EventBus** was removed due to non-usage: since most actions are now either constrainted to the `SequenceManager` in the movements or via HomeAssistant.
 
 Javadocs are published at the [GitHub Pages](https://eagrahamjr.github.io/kobots-parts/) for this project.
 

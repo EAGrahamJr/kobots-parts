@@ -35,6 +35,11 @@ interface Actuator<M : Movement> {
      * Perform the [Movement] and return `true` if the movement was successful/completed.
      */
     infix fun move(movement: M): Boolean
+
+    /**
+     * Return the currently _set_ value (e.g. where the actuator "is")
+     */
+    fun current(): Number
 }
 
 /**
@@ -50,16 +55,6 @@ interface StepperActuator {
      * Allows for "re-calibration" of the stepper's position.
      */
     fun reset()
-
-    /**
-     * This should be called as part of the movement to check whether the stepper is at limits or not. The requested
-     * [whereTo] is supplied so that the check can determine what might be happening.
-     *
-     * Note that this also allows the actuator to "reset" any internal variables to keep a more accurate position.
-     *
-     * @return `true` if the limit has been reached
-     */
-    fun limitCheck(whereTo: Int): Boolean = false
 }
 
 /**
