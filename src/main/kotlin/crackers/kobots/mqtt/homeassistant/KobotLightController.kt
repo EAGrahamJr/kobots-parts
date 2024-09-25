@@ -40,7 +40,7 @@ interface LightController {
     }
 
     /**
-     * Flash the light (on/off) using this period (seconds). Continues
+     * Flash the light (on/off) using this period (seconds). Continues flashing until another command is received.
      *
      * **NOTE** HA is only currently sending either 10 or 2 to signal fast/slow.
      */
