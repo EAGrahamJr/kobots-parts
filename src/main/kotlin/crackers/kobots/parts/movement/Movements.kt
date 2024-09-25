@@ -35,6 +35,11 @@ interface Actuator<M : Movement> {
      * Perform the [Movement] and return `true` if the movement was successful/completed.
      */
     infix fun move(movement: M): Boolean
+
+    /**
+     * Return the currently _set_ value (e.g. where the actuator "is")
+     */
+    fun current(): Number
 }
 
 /**

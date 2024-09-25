@@ -53,7 +53,7 @@ interface Rotator : Actuator<RotationMovement> {
     /**
      * Current location.
      */
-    fun current(): Int
+    override fun current(): Int
 }
 
 /**
@@ -120,15 +120,11 @@ open class BasicStepperRotator(
         if (destinationSteps < stepsLocation) {
             stepsLocation--
             theStepper.step(backwardDirection, stepStyle)
-            stepsToDegrees[stepsLocation]?.also { anglesForStep ->
-                angleLocation = if (stepsLocation !in anglesForStep) anglesForStep.max() else anglesForStep.min()
-            }
+            angleLocation = stepsToDegrees[stepsLocation]?.min() ?: angleLocation
         } else {
             stepsLocation++
             theStepper.step(forwardDirection, stepStyle)
-            stepsToDegrees[stepsLocation]?.also { anglesForStep ->
-                angleLocation = if (stepsLocation !in anglesForStep) anglesForStep.min() else anglesForStep.max()
-            }
+            angleLocation = stepsToDegrees[stepsLocation]?.max() ?: angleLocation
         }
         // are we there yet?
         return (destinationSteps == stepsLocation).also {

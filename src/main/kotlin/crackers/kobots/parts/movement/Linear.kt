@@ -44,7 +44,7 @@ interface LinearActuator : Actuator<LinearMovement> {
     /**
      * Returns the current position as a percentage of the total range of motion.
      */
-    fun current(): Int
+    override fun current(): Int
 
     /**
      * Operator short-cut for [extendTo].
