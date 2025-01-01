@@ -42,7 +42,7 @@ abstract class Rotator : Actuator<RotationMovement> {
     /**
      * Take a "step" towards this destination. Returns `true` if the target has been reached.
      */
-    internal abstract fun rotateTo(angle: Int): Boolean
+    abstract fun rotateTo(angle: Int): Boolean
 }
 
 /**
@@ -92,9 +92,6 @@ open class BasicStepperRotator(
 
     override val current: Int
         get() = angleLocation
-
-    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
-    override fun current(): Int = angleLocation
 
     override fun rotateTo(angle: Int): Boolean {
         // first check to see if the angles already match
@@ -228,9 +225,6 @@ open class ServoRotator(
 
     override val current: Int
         get() = where
-
-    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
-    override fun current(): Int = where
 
     /**
      * Figure out if we need to move or not (and how much)

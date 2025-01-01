@@ -179,11 +179,11 @@ class RotatorTest : FunSpec(
                 // move it to 68 and then attempt to iterate to 69 (should take 2 moves)
                 rotor.test(68)
 
-                val startingAngle = rotor.current()
+                val startingAngle = rotor.current
                 var t = false
                 var count = 0
-                while (rotor.current() == startingAngle && !t && count < 10) {
-                    val c = rotor.current()
+                while (rotor.current == startingAngle && !t && count < 10) {
+                    val c = rotor.current
                     t = rotor.rotateTo(c + 1)
                     count++
                 }

@@ -39,7 +39,7 @@ class ActionSequenceTest : FunSpec(
 
                 runAndGetCount(action::step) shouldBe 89
                 action.step() shouldBe true
-                rotator.current() shouldBe 90
+                rotator.current shouldBe 90
             }
 
             /**
@@ -50,7 +50,7 @@ class ActionSequenceTest : FunSpec(
                 val rotator = MockRotator()
                 val testSequence = sequence {
                     action {
-                        rotator forwardUntil { rotator.current() >= 23 }
+                        rotator forwardUntil { rotator.current >= 23 }
                     }
                 }
 
@@ -70,7 +70,7 @@ class ActionSequenceTest : FunSpec(
                 val testSequence = sequence {
                     action {
                         rotator1 rotate 45
-                        rotator2 backwardUntil { rotator1.current() > 15 }
+                        rotator2 backwardUntil { rotator1.current > 15 }
                     }
                 }
 
@@ -79,8 +79,8 @@ class ActionSequenceTest : FunSpec(
 
                 // N.B. moving to an absolute angle takes 1 less step than the angle
                 runAndGetCount(action::step) shouldBe 44
-                rotator1.current() shouldBe 45
-                rotator2.current() shouldBe -15f
+                rotator1.current shouldBe 45
+                rotator2.current shouldBe -15f
             }
 
             /**
@@ -109,9 +109,9 @@ class ActionSequenceTest : FunSpec(
                 val action = actionDef.build().first
 
                 runAndGetCount(action::step) shouldBe maxSteps
-                rotator1.current() shouldBe angle1
-                rotator2.current() shouldBe angle2
-                rotator3.current() shouldBe angle3
+                rotator1.current shouldBe angle1
+                rotator2.current shouldBe angle2
+                rotator3.current shouldBe angle3
             }
 
             /**
@@ -132,7 +132,7 @@ class ActionSequenceTest : FunSpec(
                         rotator rotate {
                             angle = angles[1]
                             stopCheck = {
-                                if (secondStartsAt == null) secondStartsAt = rotator.current()
+                                if (secondStartsAt == null) secondStartsAt = rotator.current
                                 false
                             }
                         }
@@ -145,7 +145,7 @@ class ActionSequenceTest : FunSpec(
                     count += runAndGetCount(action::step)
                 }
                 secondStartsAt shouldBe angles[0]
-                rotator.current() shouldBe angles[1]
+                rotator.current shouldBe angles[1]
 
                 // the count should bhe the number of steps to get to the first angle (minus 1) plus the number of steps to
                 // get to the second angle from the first (minus 1)
@@ -183,7 +183,7 @@ class ActionSequenceTest : FunSpec(
                     runAndGetCount(firstAction::step) + runAndGetCount(secondAction::step) shouldBe numberOfMoves
                     firstAction.step() shouldBe true
                     secondAction.step() shouldBe true
-                    rotator.current() shouldBe 0f
+                    rotator.current shouldBe 0f
                 }
             }
 
@@ -207,10 +207,8 @@ class ActionSequenceTest : FunSpec(
                 val testSequence = sequence {
                     action {
                         rotator forwardUntil {
-                            rotator.current().let { current ->
-                                (current == angles[angleIndex]).also { hasStopped ->
-                                    if (hasStopped) stoppedAt += current
-                                }
+                            (rotator.current == angles[angleIndex]).also { hasStopped ->
+                                if (hasStopped) stoppedAt += rotator.current
                             }
                         }
                     }
@@ -229,7 +227,7 @@ class ActionSequenceTest : FunSpec(
 
                     val count = runAndGetCount(randomAction::step) + runAndGetCount(resetAction::step)
                     count shouldBe abs(angles[i]) * 2 - 1 // -1 for the home move
-                    rotator.current() shouldBe 0
+                    rotator.current shouldBe 0
                     stoppedAt[i] shouldBe angles[i]
                 }
             }

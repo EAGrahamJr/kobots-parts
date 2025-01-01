@@ -69,13 +69,10 @@ open class ServoLinearActuator(
     }
 
     override val current: Int
-        get() = current()
-
-    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
-    override fun current(): Int {
-        val degrees = theServo.angle
-        return (abs(degrees - homeDegrees) * 100 / servoSwingDegrees).roundToInt().coerceIn(0..100)
-    }
+        get() {
+            val degrees = theServo.angle
+            return (abs(degrees - homeDegrees) * 100 / servoSwingDegrees).roundToInt().coerceIn(0..100)
+        }
 }
 
 /**
@@ -130,10 +127,7 @@ open class StepperLinearActuator(
     }
 
     override val current: Int
-        get() = current()
-
-    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
-    override fun current() = (currentSteps * 100f / maxSteps).roundToInt().coerceIn(0..100)
+        get() = (currentSteps * 100f / maxSteps).roundToInt().coerceIn(0..100)
 
     override fun release() = theStepper.release()
 

@@ -161,7 +161,6 @@ class ActionBuilder {
         private val NO_OP = object : Actuator<ExecutionMovement> {
             // everything is done in the stop-check
             override fun move(movement: ExecutionMovement) = false
-            override fun current() = 0
             override val current = 0
         }
     }

@@ -36,9 +36,8 @@ open class MockRotator : Rotator() {
         return doneYet
     }
 
-    override val current: Number
+    override val current: Int
         get() = angle
-    override fun current(): Int = angle
 }
 
 open class MockLinear : LinearActuator() {
@@ -58,8 +57,6 @@ open class MockLinear : LinearActuator() {
 
     override val current: Number
         get() = percentage
-
-    override fun current(): Int = percentage
 }
 
 fun runAndGetCount(block: () -> Boolean): Int {
