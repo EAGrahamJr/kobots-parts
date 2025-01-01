@@ -21,7 +21,7 @@ import kotlin.random.Random
 /**
  * A generic rotoator that can be used for testing.
  */
-open class MockRotator : Rotator {
+open class MockRotator : Rotator() {
     var angle: Int = 0
     var stopCheckResult = false
 
@@ -36,7 +36,30 @@ open class MockRotator : Rotator {
         return doneYet
     }
 
+    override val current: Number
+        get() = angle
     override fun current(): Int = angle
+}
+
+open class MockLinear : LinearActuator() {
+    var percentage: Int = 0
+    var stopCheckResult = false
+
+    override fun extendTo(percentage: Int): Boolean {
+        var doneYet = stopCheckResult || this.percentage == percentage
+        if (doneYet) return true
+
+        if (percentage > this.percentage) {
+            this.percentage += 1
+        } else if (percentage < this.percentage) this.percentage -= 1
+        doneYet = this.percentage == percentage
+        return doneYet
+    }
+
+    override val current: Number
+        get() = percentage
+
+    override fun current(): Int = percentage
 }
 
 fun runAndGetCount(block: () -> Boolean): Int {

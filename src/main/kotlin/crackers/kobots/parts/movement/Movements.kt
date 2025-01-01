@@ -39,6 +39,12 @@ interface Actuator<M : Movement> {
     /**
      * Return the currently _set_ value (e.g. where the actuator "is")
      */
+    val current: Number
+
+    /**
+     * Return the currently _set_ value (e.g. where the actuator "is")
+     */
+    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
     fun current(): Number
 }
 

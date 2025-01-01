@@ -17,7 +17,7 @@
 package crackers.kobots.parts.movement
 
 import crackers.kobots.parts.app.KobotSleep
-import java.time.Duration
+import kotlin.time.Duration
 
 /**
  * An [Action] is a sequence of [Movement]s to perform. Each [Movement] is associated with a [Actuator] and is to be
@@ -45,17 +45,14 @@ class Action(movements: Map<Actuator<Movement>, Movement>) {
      */
     fun step(stepExecutionTime: Duration = Duration.ZERO): Boolean {
         // get nano sleeps
-        val nanoSleeps = Duration.ofNanos(stepExecutionTime.toNanos() / executionList.size)
+        val nanoSleeps = stepExecutionTime.inWholeNanoseconds / executionList.size
 
         return movementResults
-            .mapIndexed { index, previous ->
-                executeAndPause(nanoSleeps) { previous || executeMovement(index) }
-            }
+            .mapIndexed { index, previous -> executeAndPause(nanoSleeps) { previous || executeMovement(index) } }
             .all { it }
     }
 
-    private fun <R> executeAndPause(maxPause: Duration, block: () -> R): R {
-        val pauseForNanos = maxPause.toNanos()
+    private fun <R> executeAndPause(pauseForNanos: Long, block: () -> R): R {
         val startAt = System.nanoTime()
 
         return try {

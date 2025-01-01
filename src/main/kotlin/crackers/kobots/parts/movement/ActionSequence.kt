@@ -21,57 +21,14 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 /**
- * Base parts for all movements.
- */
-abstract class MovementBuilder<out M : Movement, out A : Actuator<out M>>(private val actuator: A) {
-    var stopCheck: () -> Boolean = { false }
-
-    @Suppress("UNCHECKED_CAST")
-    fun build(): Pair<Actuator<Movement>, Movement> = Pair(actuator as Actuator<Movement>, makeMovement())
-
-    protected abstract fun makeMovement(): M
-}
-
-class RotationMovementBuilder(rotator: Rotator) : MovementBuilder<RotationMovement, Rotator>(rotator) {
-    var angle: Int = 0
-
-    override fun makeMovement(): RotationMovement {
-        return RotationMovement(angle, stopCheck)
-    }
-}
-
-class LinearMovementBuilder(linear: LinearActuator) : MovementBuilder<LinearMovement, LinearActuator>(linear) {
-    var distance: Int = 0
-
-    override fun makeMovement(): LinearMovement {
-        return LinearMovement(distance, stopCheck)
-    }
-}
-
-/*
- * Movement, actuator, and builder for executing a code block as a movement.
- */
-// only need one of these
-private val SIMPLE = object : Actuator<Movement> {
-    // stop check has the code`
-    override fun move(movement: Movement) = false
-    override fun current() = 0
-}
-
-private class ExecutableMovementBuilder(private val function: () -> Boolean) :
-    MovementBuilder<Movement, Actuator<Movement>>(SIMPLE) {
-    override fun makeMovement(): Movement {
-        return object : Movement {
-            override val stopCheck = function
-        }
-    }
-}
-
-/**
  * How long each step should take to execute **at a minimum**.
  */
 interface ActionSpeed {
     val millis: Long
+    val duration: Duration
+        get() = millis.toDuration(DurationUnit.MILLISECONDS)
+
+    @Deprecated(message = "Use 'val' instead", replaceWith = ReplaceWith("duration"))
     fun duration(): Duration = millis.toDuration(DurationUnit.MILLISECONDS)
 }
 
@@ -93,62 +50,79 @@ enum class DefaultActionSpeed(override val millis: Long) : ActionSpeed {
 }
 
 /**
- * Builds up movements for an action.
+ * Just runs the stop-check. Library only.
+ */
+internal class ExecutionMovement(override val stopCheck: () -> Boolean) : Movement
+
+/**
+ * Builds up movements for an [Action].
  */
 class ActionBuilder {
-    private val steps = mutableListOf<MovementBuilder<*, *>>()
+    private val steps = mutableMapOf<Actuator<*>, Movement>()
+
+    /**
+     * How "fast" this action runs: e.g. each "step" takes this amount of time _at a minimum_.
+     */
     var requestedSpeed: ActionSpeed = DefaultActionSpeed.NORMAL
 
     /**
-     * DSL to rotate a [Rotator]: requires stop check and angle
+     * DSL to define a [RotationMovement] in an action.
      */
-    infix fun Rotator.rotate(init: RotationMovementBuilder.() -> Unit) {
-        steps += RotationMovementBuilder(this).apply(init)
+    class Rotation {
+        var angle: Int = 0
+        var stopCheck = { false }
     }
 
     /**
-     * DSL to rotate a [Rotator] to a specific angle without a stop check.
+     * DSL to rotate a [Rotator] to an angle with a stop-check
+     */
+    infix fun Rotator.rotate(r: Rotation.() -> Unit) {
+        val r2 = Rotation().apply(r)
+        steps[this] = RotationMovement(r2.angle, r2.stopCheck)
+    }
+
+    /**
+     * DSL to rotate a [Rotator] to a specific angle.
      */
     infix fun Rotator.rotate(angle: Int) {
-        steps += RotationMovementBuilder(this).apply {
-            this.angle = angle
-        }
+        steps[this] = RotationMovement(angle)
     }
 
     /**
      * DSL to rotate a [Rotator] in a "positive" direction with the given check used as a stop-check.
      */
     infix fun Rotator.forwardUntil(forwardCheck: () -> Boolean) {
-        steps += RotationMovementBuilder(this).apply {
-            angle = Int.MAX_VALUE
-            stopCheck = forwardCheck
-        }
+        steps[this] = RotationMovement(Int.MAX_VALUE, forwardCheck)
     }
 
     /**
      * DSL to rotate a [Rotator] in a "negative" direction until a stop check is true.
      */
     infix fun Rotator.backwardUntil(backwardCheck: () -> Boolean) {
-        steps += RotationMovementBuilder(this).apply {
-            angle = -Int.MAX_VALUE
-            stopCheck = backwardCheck
-        }
+        steps[this] = RotationMovement(-Int.MAX_VALUE, backwardCheck)
+    }
+
+    /**
+     * DSL to define a [LinearMovement] in an action.
+     */
+    class Linear {
+        var percentage = 0
+        var stopCheck = { false }
     }
 
     /**
      * DSL to move a [LinearActuator] to a specific position with a stop check.
      */
-    infix fun LinearActuator.extend(init: LinearMovementBuilder.() -> Unit) {
-        steps += LinearMovementBuilder(this).apply(init)
+    infix fun LinearActuator.extend(m: Linear.() -> Unit) {
+        val m2 = Linear().apply(m)
+        steps[this] = LinearMovement(m2.percentage, m2.stopCheck)
     }
 
     /**
      * DSL to move a [LinearActuator] to a specific position without a stop check.
      */
     infix fun LinearActuator.goTo(position: Int) {
-        steps += LinearMovementBuilder(this).apply {
-            distance = position
-        }
+        steps[this] = LinearMovement(position)
     }
 
     /**
@@ -156,7 +130,7 @@ class ActionBuilder {
      * this is a "naked" stop check).
      */
     fun execute(function: () -> Boolean) {
-        steps += ExecutableMovementBuilder(function)
+        steps[NO_OP] = ExecutionMovement(function)
     }
 
     /**
@@ -177,18 +151,20 @@ class ActionBuilder {
     /**
      * Build the action's steps.
      */
-    fun build(): Action {
-        return Action(steps.associate { it.build() })
-    }
-}
+    @Suppress("UNCHECKED_CAST")
+    internal fun build() = Pair(Action(steps as Map<Actuator<Movement>, Movement>), requestedSpeed.duration)
 
-/**
- * Associates an [Action] with a [speed]. Note that the `Action` is rebuilt each time this is called.
- */
-class ExecutableAction internal constructor(private val builder: ActionBuilder) {
-    val action: Action
-        get() = builder.build()
-    val speed: ActionSpeed = builder.requestedSpeed
+    companion object {
+        /**
+         * No move actuator. Library only.
+         */
+        private val NO_OP = object : Actuator<ExecutionMovement> {
+            // everything is done in the stop-check
+            override fun move(movement: ExecutionMovement) = false
+            override fun current() = 0
+            override val current = 0
+        }
+    }
 }
 
 /**
@@ -222,7 +198,15 @@ class ActionSequence {
      * Append (add) another action builder to the list of steps. Does not return anything but does modify the
      * internal list. (Yes, this is contrary to most operators, but it's nicer for DSL.)
      */
+    @Deprecated(message = "Invalid semantics applied", replaceWith = ReplaceWith("plusAssign(actionBuilder)"))
     operator fun plus(actionBuilder: ActionBuilder) {
+        this.steps += actionBuilder
+    }
+
+    /**
+     * Append (add) another action builder to the list of steps.
+     */
+    operator fun plusAssign(actionBuilder: ActionBuilder) {
         this.steps += actionBuilder
     }
 
@@ -236,7 +220,7 @@ class ActionSequence {
     /**
      * Build the sequence of actions.
      */
-    fun build(): List<ExecutableAction> = steps.map { ExecutableAction(it) }
+    internal fun build(): List<ActionBuilder> = steps
 }
 
 /**

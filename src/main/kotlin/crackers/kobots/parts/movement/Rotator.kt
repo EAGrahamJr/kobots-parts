@@ -22,7 +22,6 @@ import com.diozero.devices.sandpit.motor.BasicStepperMotor
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.BACKWARD
 import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction.FORWARD
 import crackers.kobots.devices.at
-import crackers.kobots.parts.movement.LimitedRotator.Companion.MAX_ANGLE
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -32,7 +31,7 @@ import kotlin.math.roundToInt
  * absolutely, somewhat interchangeably. Rotation is roughly based on angular _motor_ movement, not necessarily
  * corresponding to real world coordinates.
  */
-interface Rotator : Actuator<RotationMovement> {
+abstract class Rotator : Actuator<RotationMovement> {
     /**
      * Rotate towards the target and return `true` when completed
      */
@@ -43,17 +42,7 @@ interface Rotator : Actuator<RotationMovement> {
     /**
      * Take a "step" towards this destination. Returns `true` if the target has been reached.
      */
-    infix fun rotateTo(angle: Int): Boolean
-
-    /**
-     * Rotate to the given angle. Returns `true` if the target has been reached.
-     */
-    operator fun div(angle: Int): Boolean = rotateTo(angle)
-
-    /**
-     * Current location.
-     */
-    override fun current(): Int
+    internal abstract fun rotateTo(angle: Int): Boolean
 }
 
 /**
@@ -72,7 +61,7 @@ open class BasicStepperRotator(
     reversed: Boolean = false,
     val stepStyle: StepStyle = StepStyle.SINGLE,
     stepsPerRotation: Int = theStepper.stepsPerRotation.toInt()
-) : Rotator, StepperActuator {
+) : Rotator(), StepperActuator {
 
     protected val degreesToSteps: Map<Int, Int>
     protected val stepsToDegrees: Map<Int, MutableList<Int>>
@@ -101,6 +90,10 @@ open class BasicStepperRotator(
     protected var stepsLocation: Int = 0
     protected var angleLocation: Int = 0
 
+    override val current: Int
+        get() = angleLocation
+
+    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
     override fun current(): Int = angleLocation
 
     override fun rotateTo(angle: Int): Boolean {
@@ -145,8 +138,8 @@ open class BasicStepperRotator(
  * A [Rotator] that is constrained to a physical angular range, in degrees. This is useful for servos that are not
  * "continuous rotation" types.
  */
-interface LimitedRotator : Rotator {
-    val physicalRange: IntRange
+abstract class LimitedRotator : Rotator() {
+    abstract val physicalRange: IntRange
 
     /**
      * Operator to rotate to a percentage of the physical range. For example, if the physical range is `0..180`, then
@@ -198,7 +191,7 @@ open class ServoRotator(
     final override val physicalRange: IntRange,
     private val servoRange: IntRange,
     private val delta: Int = 1
-) : LimitedRotator {
+) : LimitedRotator() {
 
     /**
      * Alternate constructor where the "gear ratio" is 1:1 (servo move == physical move). The default movement is a
@@ -232,14 +225,18 @@ open class ServoRotator(
 
     // where this thing thinks it is -- internal for testing purposes **only**
     internal var where = physicalRange.first
+
+    override val current: Int
+        get() = where
+
+    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
     override fun current(): Int = where
 
     /**
      * Figure out if we need to move or not (and how much)
      */
     override fun rotateTo(angle: Int): Boolean {
-        val now = current()
-        if (angle == now) return true
+        if (angle == where) return true
 
         // special case -- if the target is MAXINT, use the physical range as the target
         // NOTE -- this may cause the servo to jitter or not move at all
@@ -250,16 +247,16 @@ open class ServoRotator(
         // angle must be in the physical range
         require(angle in physicalRange) { "Angle '$angle' is not in physical range '$physicalRange'." }
 
-        // find the "next" angle from now based on where the target is
-        val nowKeyIndex = availableDegrees.indexOf(now)
-        val nextAngleIndex = (if (angle < now) nowKeyIndex - 1 else nowKeyIndex + 1)
+        // find the "next" angle from where based on where the target is
+        val whereKeyIndex = availableDegrees.indexOf(where)
+        val nextAngleIndex = (if (angle < where) whereKeyIndex - 1 else whereKeyIndex + 1)
             .coerceIn(0, availableDegrees.size - 1)
 
         val nextAngle = availableDegrees[nextAngleIndex]
         // do not move beyond the requested angle
-        if (nextAngle < angle && angle < now) {
+        if (nextAngle < angle && angle < where) {
             return true
-        } else if (nextAngle > angle && angle > now) return true
+        } else if (nextAngle > angle && angle > where) return true
 
         // so where the hell are we going?
         val nextServoAngle = degreesToServo[nextAngle]!!

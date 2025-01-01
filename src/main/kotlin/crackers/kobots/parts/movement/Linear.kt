@@ -30,7 +30,7 @@ import kotlin.math.roundToInt
  * of the total range of motion. Note that some actuators may not be able to move partially, so the actual movement
  * may be rounded to fully extend or retract (e.g. a solenoid).
  */
-interface LinearActuator : Actuator<LinearMovement> {
+abstract class LinearActuator : Actuator<LinearMovement> {
     override infix fun move(movement: LinearMovement): Boolean {
         return extendTo(max(0, min(100, movement.percentage)))
     }
@@ -39,19 +39,7 @@ interface LinearActuator : Actuator<LinearMovement> {
      * Extend or retract the actuator to the given percentage of the total range of motion. Returns `true` if the
      * target has been reached.
      */
-    infix fun extendTo(percentage: Int): Boolean
-
-    /**
-     * Returns the current position as a percentage of the total range of motion.
-     */
-    override fun current(): Int
-
-    /**
-     * Operator short-cut for [extendTo].
-     *
-     * Example: `actuator % 50`
-     */
-    operator fun rem(delta: Int): Boolean = extendTo(delta)
+    internal abstract fun extendTo(percentage: Int): Boolean
 }
 
 /**
@@ -64,22 +52,26 @@ open class ServoLinearActuator(
     val theServo: ServoDevice,
     val homeDegrees: Float,
     val maximumDegrees: Float
-) : LinearActuator {
+) : LinearActuator() {
     private val servoSwingDegrees = abs(maximumDegrees - homeDegrees)
     private val whichWay = if (maximumDegrees > homeDegrees) 1f else -1f
 
     override fun extendTo(percentage: Int): Boolean {
         if (percentage < 0 || percentage > 100) return true
 
-        val delta = percentage - current()
+        val delta = percentage - current
         if (delta != 0) {
             val currentAngle = theServo.angle
 
             theServo.angle = if (delta > 0) currentAngle + whichWay else currentAngle - whichWay
         }
-        return abs(percentage - current()) <= 1
+        return abs(percentage - current) <= 1
     }
 
+    override val current: Int
+        get() = current()
+
+    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
     override fun current(): Int {
         val degrees = theServo.angle
         return (abs(degrees - homeDegrees) * 100 / servoSwingDegrees).roundToInt().coerceIn(0..100)
@@ -97,7 +89,7 @@ open class StepperLinearActuator(
     val maxSteps: Int,
     val reversed: Boolean = false,
     val stepStyle: StepStyle = StepStyle.SINGLE
-) : LinearActuator, StepperActuator {
+) : LinearActuator(), StepperActuator {
 
     protected val pct2Steps = (0..100).map { pct -> pct to (pct * maxSteps / 100f).roundToInt() }.toMap()
 
@@ -137,6 +129,10 @@ open class StepperLinearActuator(
         }
     }
 
+    override val current: Int
+        get() = current()
+
+    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
     override fun current() = (currentSteps * 100f / maxSteps).roundToInt().coerceIn(0..100)
 
     override fun release() = theStepper.release()

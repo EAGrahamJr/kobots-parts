@@ -21,7 +21,6 @@ import crackers.kobots.mqtt.KobotsMQTT.Companion.KOBOTS_EVENTS
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -120,8 +119,10 @@ abstract class SequenceExecutor(
             preExecution()
             try {
                 request.sequence.build().forEach { action ->
+                    val (doThis, requestedSpeed) = action.build()
+
                     // while can run, not stopping, and the action is not done...
-                    while (canRun() && moveInProgress && !action.action.step(Duration.ofMillis(action.speed.millis))) {
+                    while (canRun() && moveInProgress && !doThis.step(requestedSpeed)) {
                         updateCurrentState()
                     }
                 }
