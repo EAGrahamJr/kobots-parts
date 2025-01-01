@@ -36,7 +36,7 @@ import java.awt.Color
  *
  * TODO allow for multiplexing multiple NeoKey1x4s
  */
-class NeoKeyHandler(
+open class NeoKeyHandler(
     val keyboard: NeoKey = NeoKey(),
     val activationColor: Color = Color.YELLOW,
     initialColors: List<Color> = listOf(Color.BLUE, Color.GREEN, Color.CYAN, Color.RED),
@@ -92,7 +92,7 @@ class NeoKeyHandler(
     /**
      * Reset the colors of the buttons to [buttonColors], only if necessary.
      */
-    fun updateButtonColors(force: Boolean = false) {
+    open fun updateButtonColors(force: Boolean = false) {
         val newColors: List<PixelColor> = buttonColors.map { PixelColor(it, brightness = brightness) }
         val colors: List<PixelColor> = keyboard.colors()
         if (newColors != colors || force) {
@@ -100,7 +100,7 @@ class NeoKeyHandler(
         }
     }
 
-    private val logger by lazy { LoggerFactory.getLogger("NeoKeyHandler") }
+    protected val logger by lazy { LoggerFactory.getLogger("NeoKeyHandler") }
 
     /**
      * The default button callback. This sets the activation color for any buttons that are pressed and returns to
