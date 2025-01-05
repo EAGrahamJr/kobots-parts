@@ -17,6 +17,8 @@
 package crackers.kobots
 
 import io.kotest.core.config.AbstractProjectConfig
+import io.kotest.core.extensions.Extension
+import io.kotest.extensions.junitxml.JunitXmlReporter
 
 /**
  * Everything does this
@@ -26,4 +28,12 @@ class ProjectLevelTestConfig : AbstractProjectConfig() {
         System.setProperty("mqtt.broker", "tcp://localhost:1883")
         displayFullTestPath = true
     }
+
+    override fun extensions(): List<Extension> = listOf(
+        JunitXmlReporter(
+//            includeContainers = false, // don't write out status for all tests
+            useTestPathAsName = true, // use the full test path (ie, includes parent test names)
+//            outputDir = "../target/junit-xml" // include to set output dir for maven
+        )
+    )
 }

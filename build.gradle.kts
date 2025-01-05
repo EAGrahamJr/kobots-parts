@@ -32,7 +32,8 @@ dependencies {
     }
     compileOnly("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
 
-    testImplementation("io.kotest:kotest-runner-junit5:5.6.2")
+    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
+    testImplementation("io.kotest:kotest-extensions-junitxml:5.9.1")
     testImplementation("io.mockk:mockk:1.13.5")
     testImplementation("ch.qos.logback:logback-classic:1.5.13")
 
@@ -59,6 +60,10 @@ tasks {
     }
     test {
         useJUnitPlatform()
+        reports {
+            junitXml.required.set(false)
+        }
+//        systemProperty("gradle.build.dir", project.layout.buildDirectory)
     }
     javadoc {
         mustRunAfter("test")

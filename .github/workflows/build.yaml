@@ -82,6 +82,14 @@ jobs:
         uses: actions/checkout@v4
       - name: Build
         run: ./gradlew --no-daemon build dokkaJavadoc
+      - name: Test Summary
+        uses: dorny/test-reporter@v1
+        with:
+          name: "JUnit Tests"
+          path: "build/test-results/test/*.xml"
+          reporter: "java-junit"
+          artifact: test-results
+        if: always()
       # the actual page generation
       - name: Setup Pages
         uses: actions/configure-pages@v5
