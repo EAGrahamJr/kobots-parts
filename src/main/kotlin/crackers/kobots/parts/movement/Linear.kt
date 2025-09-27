@@ -39,7 +39,7 @@ abstract class LinearActuator : Actuator<LinearMovement> {
      * Extend or retract the actuator to the given percentage of the total range of motion. Returns `true` if the
      * target has been reached.
      */
-    internal abstract fun extendTo(percentage: Int): Boolean
+    abstract fun extendTo(percentage: Int): Boolean
 }
 
 /**

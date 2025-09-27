@@ -105,6 +105,19 @@ class RotatorTest : FunSpec(
                     mockStepper.step(StepperMotorInterface.Direction.FORWARD, any())
                 }
             }
+            /**
+             * Motor has 360 steps per rotation and a gear ratio of 1.0, starting from 0. The target is
+             * -90 degrees.
+             */
+            test("stepper 360, 1.0 gear ratio, -90 deg") {
+                every { mockStepper.stepsPerRotation } answers { 360 }
+                val rotor = BasicStepperRotator(mockStepper, 1.0f)
+
+                rotor.test(-90)
+                verify(atLeast = 268, atMost = 272) {
+                    mockStepper.step(StepperMotorInterface.Direction.FORWARD, any())
+                }
+            }
         }
 
         /**

@@ -60,6 +60,7 @@ class KobotsMQTT(private val clientName: String, broker: String) : AutoCloseable
             connectionTimeout = 10
         }
         MqttAsyncClient(broker, clientName).apply {
+            logger.warn("Connecting to ${broker}")
             setCallback(mqttCallback)
             connect(options).waitForCompletion()
         }

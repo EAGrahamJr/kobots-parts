@@ -74,7 +74,7 @@ open class BasicStepperRotator(
         stepsToDegrees = mutableMapOf()
         degreesToSteps = (0..359).map { deg: Int ->
             val steps = (deg * stepRatio).roundToInt()
-            stepsToDegrees.compute(steps) { _, v -> (v ?: mutableListOf()).apply { add(deg) } }
+            stepsToDegrees.getOrPut(steps) { mutableListOf() }.add(deg)
             deg to steps
         }.toMap()
     }
@@ -94,15 +94,18 @@ open class BasicStepperRotator(
         get() = angleLocation
 
     override fun rotateTo(angle: Int): Boolean {
-        // first check to see if the angles already match
-        if (angleLocation == angle) return true
+        // find out where we're supposed to be - even take negatives into account
+        val modifiedAngle = if (angle < 0) 360 + angle else angle
+        val realAngle = abs(modifiedAngle % 360)
 
-        // find out where we're supposed to be for steps
-        val realAngle = abs(angle % 360)
+        // first check to see if the angles already match
+        if (angleLocation == realAngle) return true
+
+        // convert to steps
         val destinationSteps = degreesToSteps[realAngle]!!
-        // and if steps match, angles match and everything is good
+        // and if steps match, also good
         if (destinationSteps == stepsLocation) {
-            angleLocation = angle
+            angleLocation = realAngle
             return true
         }
 
@@ -118,7 +121,7 @@ open class BasicStepperRotator(
         }
         // are we there yet?
         return (destinationSteps == stepsLocation).also {
-            if (it) angleLocation = angle
+            if (it) angleLocation = realAngle
         }
     }
 
@@ -202,7 +205,7 @@ open class ServoRotator(
     )
 
     // map physical degrees to where the servo should be
-    private val degreesToServo: SortedMap<Int, Int>
+    protected val degreesToServo: SortedMap<Int, Int>
 
     init {
         require(physicalRange.first < physicalRange.last) { "physicalRange '$physicalRange' must be increasing" }

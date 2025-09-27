@@ -16,13 +16,16 @@
 
 package crackers.kobots.app
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import crackers.hassk.HAssKClient
 import crackers.kobots.mqtt.KobotsMQTT
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -31,21 +34,19 @@ import java.util.concurrent.atomic.AtomicBoolean
  * This is _highly_ opinionated and is not necessarily intended to be a general purpose library for anyone but myself.
  */
 object AppCommon {
-    private val logger by lazy { LoggerFactory.getLogger("AppCommon") }
+    private val logger: Logger by lazy { LoggerFactory.getLogger("AppCommon") }
 
     /**
      * A generally sharable executor for running things. Most apps will rely on either callbacks or futures, so this
      * just provides a simple way to manage the application's threads.
      */
-    val executor by lazy { Executors.newScheduledThreadPool(4) }
+    val executor: ScheduledExecutorService by lazy { Executors.newScheduledThreadPool(4) }
 
     /**
      * A flag to indicate if the application is running. This is used to control execution loops, when necessary
      * (usually in the main application, polling for inputs).
-     *
-     * It's recommended that [applicationRunning] is used instead of this directly.
      */
-    val runFlag = AtomicBoolean(true)
+    private val runFlag = AtomicBoolean(true)
 
     /**
      * A useful latch for waiting for the application to stop. Used with the [applicationRunning] property.
@@ -90,7 +91,7 @@ object AppCommon {
     /**
      * Convenience property for the application configuration.
      */
-    val applicationConfig by lazy { ConfigFactory.load() }
+    val applicationConfig: Config by lazy { ConfigFactory.load() }
 
     /**
      * HomeAssistant client using the configuration in `application.conf`.

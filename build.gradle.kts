@@ -1,12 +1,13 @@
+import crackers.buildstuff.semver.SimpleSemverVersion
+
 plugins {
     kotlin("jvm") version "2.0.20"
     idea
     // TODO IDEA formatting != "official" (wtf guys)
 //    id("org.jmailen.kotlinter") version "3.12.0"
-    id("org.jetbrains.dokka") version "1.8.10"
-    // ***NOTE*** semver is applied on push, so it's the _next_ version
-    id("net.thauvin.erik.gradle.semver") version "1.0.4"
-    id("crackers.buildstuff.crackers-gradle-plugins") version "1.1.0"
+   id("org.jetbrains.dokka") version "1.8.10"
+   id("crackers.buildstuff.library-publish") version "1.3.0"
+   id("crackers.buildstuff.simple-semver") version "1.3.0"
 }
 
 repositories {
@@ -45,7 +46,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
 
 //kotlinter {
@@ -53,6 +54,8 @@ kotlin {
 //    ignoreFailures = true
 //    disabledRules = arrayOf("no-wildcard-imports")
 //}
+val semver: Provider<SimpleSemverVersion> by project
+version = semver.get().toString()
 
 tasks {
     build {
@@ -63,7 +66,6 @@ tasks {
         reports {
             junitXml.required.set(false)
         }
-//        systemProperty("gradle.build.dir", project.layout.buildDirectory)
     }
     javadoc {
         mustRunAfter("test")
@@ -87,20 +89,11 @@ tasks {
         mustRunAfter("dokkaJavadocJar")
     }
 
-    create("depSize") {
+    register("depSize") {
         doLast {
             val depSize = configurations["compileClasspath"].files.sumOf { it.length() }
             logger.warn(">>> Dependencies size: ${depSize / 1024} KB")
-        }
-    }
-
-    create("pushit") {
-        doLast {
-            val v = version
-            println("$v")
-            exec {
-                commandLine("git push --atomic origin main $v".split(" "))
-            }
+            logger.warn("supposed version $version")
         }
     }
 }
