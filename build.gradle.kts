@@ -64,7 +64,7 @@ tasks {
     test {
         useJUnitPlatform()
         reports {
-            junitXml.required.set(false)
+            junitXml.required.set(true)
         }
     }
     javadoc {
