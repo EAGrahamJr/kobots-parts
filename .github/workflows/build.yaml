@@ -83,7 +83,7 @@ jobs:
       - name: Build
         run: ./gradlew --no-daemon build dokkaJavadoc
       - name: Test Summary
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v1.9.1
         with:
           name: "JUnit Tests"
           path: "build/test-results/test/*.xml"
