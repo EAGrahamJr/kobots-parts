@@ -1,13 +1,14 @@
 import crackers.buildstuff.semver.SimpleSemverVersion
 
 plugins {
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version "2.2.20"
     idea
     // TODO IDEA formatting != "official" (wtf guys)
 //    id("org.jmailen.kotlinter") version "3.12.0"
-   id("org.jetbrains.dokka") version "1.8.10"
+    id("org.jetbrains.dokka") version "1.8.20"
    id("crackers.buildstuff.library-publish") version "1.3.0"
    id("crackers.buildstuff.simple-semver") version "1.3.0"
+    id("com.github.ben-manes.versions") version "0.53.0"
 }
 
 repositories {
@@ -24,25 +25,27 @@ group = "crackers.kobots"
 dependencies {
     // these are likely to be the ones in use
     compileOnly("crackers.kobots:kobots-devices:$DEVICES_VER")
-    compileOnly("org.json:json:20231013")
-    compileOnly("com.typesafe:config:1.4.2")
+    compileOnly("org.json:json:20250517")
+    compileOnly("com.typesafe:config:1.4.5")
 
     // optional parts
     compileOnly("crackers.automation:hassk:$HASSK_VER") {
         exclude(group = "ch.qos.logback")
     }
     compileOnly("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 
-    testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
-    testImplementation("io.kotest:kotest-extensions-junitxml:5.9.1")
-    testImplementation("io.mockk:mockk:1.13.5")
-    testImplementation("ch.qos.logback:logback-classic:1.5.13")
+    testImplementation("io.kotest:kotest-runner-junit5:6.0.3")
+    testImplementation("io.kotest:kotest-extensions-junitxml:6.0.3")
+    testImplementation("io.mockk:mockk:1.14.5")
+    testImplementation("ch.qos.logback:logback-classic:1.5.18")
 
     // re-create all the depndencies for testing
     testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
-    testImplementation("org.json:json:20231013")
-    testImplementation("com.typesafe:config:1.4.2")
+    testImplementation("org.json:json:20250517")
+    testImplementation("com.typesafe:config:1.4.5")
     testImplementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 }
 
 kotlin {

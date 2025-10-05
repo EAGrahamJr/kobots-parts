@@ -72,11 +72,11 @@ open class BasicStepperRotator(
 
         // calculate how many steps off of "zero" each degree is
         stepsToDegrees = mutableMapOf()
-        degreesToSteps = (0..359).map { deg: Int ->
+        degreesToSteps = (0..359).associate { deg: Int ->
             val steps = (deg * stepRatio).roundToInt()
             stepsToDegrees.getOrPut(steps) { mutableListOf() }.add(deg)
             deg to steps
-        }.toMap()
+        }
     }
 
     protected val forwardDirection = if (reversed) BACKWARD else FORWARD
@@ -208,17 +208,7 @@ open class ServoRotator(
     protected val degreesToServo: SortedMap<Int, Int>
 
     init {
-        require(physicalRange.first < physicalRange.last) { "physicalRange '$physicalRange' must be increasing" }
-
-        val physicalScope = physicalRange.last - physicalRange.first
-        val servoScope = servoRange.last - servoRange.first
-
-        degreesToServo = physicalRange.associateWith { angle ->
-            val normalizedPosition = (angle - physicalRange.first).toDouble() / physicalScope
-
-            val servo = (servoRange.first + normalizedPosition * servoScope).roundToInt()
-            servo
-        }.toSortedMap()
+        degreesToServo = gearedAngleTable(physicalRange, servoRange)
     }
 
     private val availableDegrees = degreesToServo.keys.toList()

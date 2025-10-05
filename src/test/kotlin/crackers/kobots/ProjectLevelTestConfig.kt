@@ -26,14 +26,13 @@ import io.kotest.extensions.junitxml.JunitXmlReporter
 class ProjectLevelTestConfig : AbstractProjectConfig() {
     init {
         System.setProperty("mqtt.broker", "tcp://localhost:1883")
-        displayFullTestPath = true
     }
 
-    override fun extensions(): List<Extension> = listOf(
+    override val displayFullTestPath: Boolean = true
+
+    override val extensions: List<Extension> = listOf(
         JunitXmlReporter(
-//            includeContainers = false, // don't write out status for all tests
             useTestPathAsName = true, // use the full test path (ie, includes parent test names)
-//            outputDir = "../target/junit-xml" // include to set output dir for maven
         )
     )
 }

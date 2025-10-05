@@ -1,6 +1,6 @@
 # Ignore Gradle project-specific cache directory
 .gradle
-,kotlin
+.kotlin
 
 # Ignore Gradle build output directory
 build
@@ -16,3 +16,5 @@ bin
 *.log
 
 edlap
+foo**
+Foo**

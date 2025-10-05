@@ -16,6 +16,9 @@
 
 package crackers.kobots.parts.movement
 
+import java.util.*
+import kotlin.math.roundToInt
+
 /**
  * Basic interface for a generic movement. A [stopCheck] function may be supplied to terminate movement, which should
  * be checked _prior_ to any physical action.
@@ -40,12 +43,6 @@ interface Actuator<M : Movement> {
      * Return the currently _set_ value (e.g. where the actuator "is")
      */
     val current: Number
-
-    /**
-     * Return the currently _set_ value (e.g. where the actuator "is")
-     */
-    @Deprecated(message = "Use 'val' instead.", replaceWith = ReplaceWith("current"))
-    fun current(): Number = current
 }
 
 /**
@@ -85,4 +82,16 @@ open class LinearMovement(
     init {
         require(percentage in 0..100) { "percentage must be between 0 and 100" }
     }
+}
+
+internal fun gearedAngleTable(physicalRange: IntRange, deviceRange: IntRange): SortedMap<Int, Int> {
+    require(physicalRange.first < physicalRange.last) { "physicalRange '$physicalRange' must be increasing" }
+
+    val physicalScope = physicalRange.last - physicalRange.first
+    val servoScope = deviceRange.last - deviceRange.first
+
+    return physicalRange.associateWith { angle ->
+        val normalizedPosition = (angle - physicalRange.first).toDouble() / physicalScope
+        (deviceRange.first + normalizedPosition * servoScope).roundToInt()
+    }.toSortedMap()
 }
