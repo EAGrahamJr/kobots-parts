@@ -1,57 +1,93 @@
 package crackers.kobots.parts.movement.async
 
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import java.util.concurrent.CountDownLatch
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
-
+/**
+ * Scene builder for orchestrating concurrent asynchronous movements.
+ */
 class SceneBuilder {
     private val actions = mutableListOf<suspend () -> Unit>()
-    private val startSwitch = CountDownLatch(1)
-
-    interface SceneMovement {
-        var duration: Duration
-        var ease: EasingFunction
-    }
-
-    /**
-     * Parameter holder class for moveTo DSL
-     */
-    class Rotate : SceneMovement {
-        override var duration: Duration = 2.seconds
-        override var ease: EasingFunction = linear
-        var angle: Int = 0
-    }
 
     /**
      * DSL construct for moveTo with named parameter assignment syntax.
-     * Usage: rotator.moveTo { angle = 90; duration = 2.seconds; ease = linear }
+     * Usage: `rotator moveTo { angle = 90; duration = 2.seconds; ease = linear }`
      */
-    infix fun AsyncRotator.moveTo(rotate: Rotate.() -> Unit) {
+    infix fun <T : AsyncRotator> T.moveTo(rotate: Rotate.() -> Unit) {
         val params = Rotate().apply(rotate)
         actions.add {
-            this.rotateTo(params.angle, params.duration, params.ease)
+            this.rotateAsync(params.angle, params.duration, params.ease)
+        }
+    }
+
+    /**
+     * DSL construct for smooth movements with named parameter assignment syntax.
+     * Usage: `rotator smoothly { angle = 90; duration = 2.seconds }`
+     */
+    infix fun <T : AsyncRotator> T.smoothly(rotate: SmoothRotate.() -> Unit) {
+        val params = SmoothRotate().apply(rotate)
+        actions.add {
+            this.rotateAsync(params.angle, params.duration, params.ease)
+        }
+    }
+
+    /**
+     * DSL construct for soft launch movements with named parameter assignment syntax.
+     * Usage: `rotator withSoftLaunch { angle = 90; duration = 2.seconds }`
+     */
+    infix fun <T : AsyncRotator> T.withSoftLaunch(rotate: SoftLaunchRotate.() -> Unit) {
+        val params = SoftLaunchRotate().apply(rotate)
+        actions.add {
+            this.rotateAsync(params.angle, params.duration, params.ease)
+        }
+    }
+
+    /**
+     * DSL construct for soft landing movements with named parameter assignment syntax.
+     * Usage: `rotator withSoftLanding { angle = 90; duration = 2.seconds }`
+     */
+    infix fun <T : AsyncRotator> T.withSoftLanding(rotate: SoftLandingRotate.() -> Unit) {
+        val params = SoftLandingRotate().apply(rotate)
+        actions.add {
+            this.rotateAsync(params.angle, params.duration, params.ease)
         }
     }
 
 
-    fun play() =
-        runBlocking {
-            val tasks = mutableListOf<kotlinx.coroutines.Job>()
-            actions.forEach { action ->
-                val task =
-                    launch {
-                        startSwitch.await()
-                        action()
-                    }
-                tasks.add(task)
+    /**
+     * Starts all actions concurrently and waits for their completion.
+     */
+    suspend fun invoke() = coroutineScope {
+        val startSwitch = CountDownLatch(1)
+
+        val tasks = mutableListOf<Job>()
+        actions.forEach { action ->
+            val task = launch {
+                startSwitch.await()
+                action()
             }
-            startSwitch.countDown()
-            tasks.joinAll()
+            tasks.add(task)
         }
+        startSwitch.countDown()
+        tasks.joinAll()
+    }
+
+    /**
+     * Runnit (blocking).
+     */
+    fun play() = runBlocking {
+        invoke()
+    }
+
+    /**
+     * Runnit (non-blocking).
+     */
+    fun start(): Job = AppScope.appScope.launch {
+        invoke()
+    }
 }
 
+/**
+ * DSL entry point for building and executing a scene.
+ */
 fun sceneBuilder(block: SceneBuilder.() -> Unit) = SceneBuilder().apply(block)

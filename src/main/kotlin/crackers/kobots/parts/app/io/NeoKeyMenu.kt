@@ -35,7 +35,7 @@ open class NeoKeyMenu(val neoKey: NeoKeyHandler, val display: MenuDisplay, items
     private val logger by lazy { LoggerFactory.getLogger("NeoKeyMenu") }
 
     // clone immutable list
-    private val menuItems = items.toList()
+    val menuItems = items.toList()
     private val maxItemsToShow = min(items.size, neoKey.numberOfButtons)
     private var leftMostIndex = 0
 

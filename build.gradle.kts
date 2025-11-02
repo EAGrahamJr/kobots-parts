@@ -42,6 +42,7 @@ dependencies {
 
     // re-create all the depndencies for testing
     testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
+    testImplementation("crackers.automation:hassk:$HASSK_VER")
     testImplementation("org.json:json:20250517")
     testImplementation("com.typesafe:config:1.4.5")
     testImplementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")

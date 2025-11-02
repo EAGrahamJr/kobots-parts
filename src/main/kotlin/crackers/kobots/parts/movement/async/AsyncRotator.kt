@@ -1,12 +1,14 @@
 package crackers.kobots.parts.movement.async
 
 import com.diozero.api.ServoDevice
+import crackers.kobots.app.AppCommon
 import crackers.kobots.parts.movement.LimitedRotator
 import crackers.kobots.parts.movement.RotationMovement
 import crackers.kobots.parts.movement.gearedAngleTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -33,7 +35,7 @@ fun ServoDevice.asyncServoRotator(
 ) = AsyncServoRotator(this, physicalRange, servoRange, delta)
 
 interface AsyncRotator {
-    suspend fun rotateTo(
+    suspend fun rotateAsync(
         angle: Int,
         time: Duration = 2.seconds,
         easing: EasingFunction = linear,
@@ -54,7 +56,7 @@ open class AsyncServoRotator(
     override val physicalRange: IntRange,
     private val servoRange: IntRange,
     private val delta: Int = 1,
-) : LimitedRotator() {
+) : LimitedRotator(), AsyncRotator {
     /**
      * Secondary constructor that assumes the servo's physical range matches its servo range and uses a delta of 1.
      */
@@ -67,6 +69,7 @@ open class AsyncServoRotator(
 
     private val mySteps = (physicalRange.last - physicalRange.first).coerceAtLeast(10) / delta
     private val realAngles: SortedMap<Int, Int> = gearedAngleTable(physicalRange, servoRange)
+    private var myLittleKillSwitch: suspend () -> Boolean = { false }
 
     fun init() {
         theServo.angle = servoRange.first.toFloat()
@@ -76,11 +79,20 @@ open class AsyncServoRotator(
     override val current: Int
         get() = _atomicCurrent.get()
 
+    protected val busy = AtomicBoolean(false)
     /**
      * Rotate to the specified angle synchronously. This function is disabled for this class of rotator.
      */
     override fun rotateTo(angle: Int): Boolean {
         throw UnsupportedOperationException("Use rotateTo(angle, time, easing) instead for AsyncServoRotator")
+    }
+
+    /**
+     * Set a kill switch function that can interrupt the rotation. This will cause an exception to be thrown if the
+     * function returns true during rotation.
+     */
+    fun setKillSwitch(killMeNow: suspend () -> Boolean) {
+        myLittleKillSwitch = killMeNow
     }
 
     /**
@@ -90,22 +102,47 @@ open class AsyncServoRotator(
      * @param time Duration of the rotation.
      * @param easing Easing function to use for the rotation.
      */
-    suspend fun rotateAsync(
+    suspend override fun rotateAsync(
         angle: Int,
-        time: Duration = 2.seconds,
-        easing: EasingFunction = linear,
+        time: Duration,
+        easing: EasingFunction,
     ) {
         // Ensure the angle is within the physical range
         require(angle in physicalRange) { "Angle $angle is out of physical range $physicalRange" }
+        if (busy.getAndSet(true))
+            return
         val servoAngle = realAngles.getOrElse(angle) { servoRange.first.toFloat() }
         easeTo(
             start = theServo.angle,
             end = servoAngle.toFloat(),
             duration = time,
-            updateFn = { withContext(Dispatchers.IO) { theServo.angle = it } },
+            updateFn = {
+                if (myLittleKillSwitch())
+                    throw InterruptedException("Rotation to $angle° interrupted by kill switch")
+                if (!AppCommon.applicationRunning)
+                    throw InterruptedException("Rotation to $angle° interrupted by application shutdown")
+
+                withContext(Dispatchers.IO) { theServo.angle = it }
+            },
             easingFn = easing,
             steps = mySteps,
         )
         _atomicCurrent.set(angle)
+        busy.set(false)
     }
+
+    suspend fun softLanding(
+        angle: Int,
+        time: Duration = 2.seconds,
+    ) = rotateAsync(angle, time, softLanding)
+
+    suspend fun softTakeoff(
+        angle: Int,
+        time: Duration = 2.seconds,
+    ) = rotateAsync(angle, time, softLaunch)
+
+    suspend fun smoothMove(
+        angle: Int,
+        time: Duration = 2.seconds,
+    ) = rotateAsync(angle, time, smooth)
 }

@@ -33,6 +33,7 @@ import java.awt.Color
  * @param activationColor the color to use when a button is pressed
  * @param initialColors the initial set of colors to use when a button is _not_ pressed (default blue, green, cyan, red)
  * @param initialBrightness the initial brightness of the keyboard (default 0.05)
+ * @param name a name for the handler; to be used for event bus identification, logging, etc. - default "NeoKeyHandler"
  *
  * TODO allow for multiplexing multiple NeoKey1x4s
  */
@@ -40,7 +41,8 @@ open class NeoKeyHandler(
     val keyboard: NeoKey = NeoKey(),
     val activationColor: Color = Color.YELLOW,
     initialColors: List<Color> = listOf(Color.BLUE, Color.GREEN, Color.CYAN, Color.RED),
-    initialBrightness: Float = 0.05f
+    initialBrightness: Float = 0.05f,
+    val name: String = "NeoKeyHandler"
 ) : AutoCloseable {
 
     private var _colors: List<Color> = initialColors.toList()
@@ -100,7 +102,7 @@ open class NeoKeyHandler(
         }
     }
 
-    protected val logger by lazy { LoggerFactory.getLogger("NeoKeyHandler") }
+    protected val logger by lazy { LoggerFactory.getLogger(name) }
 
     /**
      * The default button callback. This sets the activation color for any buttons that are pressed and returns to

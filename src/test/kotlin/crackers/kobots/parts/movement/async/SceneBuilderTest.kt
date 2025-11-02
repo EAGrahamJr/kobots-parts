@@ -42,7 +42,7 @@ class SceneBuilderTest : FunSpec(
             runBlocking {
                 builder.play()
             }
-            coVerify { rotator.rotateTo(90, 1.seconds, smooth) }
+            coVerify { rotator.rotateAsync(90, 1.seconds, smooth) }
         }
 
         test("play executes all queued actions") {
@@ -55,8 +55,8 @@ class SceneBuilderTest : FunSpec(
                 builder.play()
             }
             coVerify {
-                rotator.rotateTo(45, any(), any())
-                rotator2.rotateTo(135, any(), any())
+                rotator.rotateAsync(45, any(), any())
+                rotator2.rotateAsync(135, any(), any())
             }
         }
 
@@ -67,7 +67,7 @@ class SceneBuilderTest : FunSpec(
             runBlocking {
                 builder.play()
             }
-            coVerify { rotator.rotateTo(30, 2.seconds, linear) }
+            coVerify { rotator.rotateAsync(30, 2.seconds, linear) }
         }
 
         test("play with no actions does not throw") {
