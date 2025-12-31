@@ -26,20 +26,26 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Controller for a light device backed by a
  * [Pimoroni LED Shim](https://shop.pimoroni.com/products/led-shim?variant=3136952467466) on a Raspberry Pi.
- *
- * **NOTE** This product is no longer available.
  */
-class PimoroniShimController(private val device: PimoroniLEDShim) : LightController {
+class PimoroniShimController(
+    private val device: PimoroniLEDShim,
+    private val effects: Set<LightEffector<PimoroniLEDShim>> = emptySet()
+) : LightController {
     private val currentColor = AtomicReference(Color.BLACK)
     private val currentBrightness = AtomicInteger(0)
     private val currentState = AtomicBoolean(false)
-    private val currentEffect = AtomicReference<String>()
+    private val currentEffect = AtomicReference<LightEffector<PimoroniLEDShim>>()
 
     override val controllerIcon = "mdi:led-strip"
-    override val lightEffects: List<String>? = null
+    override val lightEffects = effects.map { it.name }.sorted()
 
     override fun set(command: LightCommand) = with(command) {
-        if (state == false) {
+        val runningEffect = currentEffect.getAndSet(null)?.let {
+            it.stop()
+            true
+        } ?: false
+
+        if (state == false || runningEffect) {
             device.sleep(true)
             currentState.set(false)
         } else {
@@ -63,13 +69,19 @@ class PimoroniShimController(private val device: PimoroniLEDShim) : LightControl
     }
 
     override fun exec(effect: String) {
-        TODO("Not yet implemented")
+        effects.firstOrNull { it.name == effect }?.let {
+            it start device
+            currentEffect.set(it)
+        }
     }
 
-    override fun current(): LightState = LightState(
-        state = currentState.get(),
-        brightness = currentBrightness.get(),
-        color = currentColor.get(),
-        effect = currentEffect.get()
-    )
+    override fun current(): LightState {
+        val runningEffect = currentEffect.get()
+        return LightState(
+            state = currentState.get() || runningEffect != null,
+            brightness = currentBrightness.get(),
+            color = currentColor.get(),
+            effect = runningEffect?.name
+        )
+    }
 }

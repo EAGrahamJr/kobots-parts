@@ -95,7 +95,7 @@ class ActionSequenceTest : FunSpec(
                 val angle2 = randomServoAngle()
                 val angle3 = randomServoAngle()
                 // N.B. moving to an absolute angle takes 1 less step than the angle
-                val maxSteps = listOf(angle1, angle2, angle3).max().toInt() - 1
+                val maxSteps = listOf(angle1, angle2, angle3).max() - 1
 
                 val testSequence = sequence {
                     action {

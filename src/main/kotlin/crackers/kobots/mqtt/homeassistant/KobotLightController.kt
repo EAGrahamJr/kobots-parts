@@ -20,6 +20,26 @@ import com.diozero.api.PwmOutputDevice
 import kotlin.math.roundToInt
 
 /**
+ * Interface for light effectors that can be applied to a light device.
+ */
+interface LightEffector<T> {
+    /**
+     * The name of the effect as it will appear in Home Assistant.
+     */
+    val name: String
+
+    /**
+     * Start the effect on the given device.
+     */
+    infix fun start(device: T)
+
+    /**
+     * Stop the effect.
+     */
+    fun stop()
+}
+
+/**
  * Interface for controlling a light. This is used by [KobotLight] to abstract the actual hardware implementation.
  *
  * The [exec], [flash], and [transition] functions are specifically called out since they will _usually_ involve some

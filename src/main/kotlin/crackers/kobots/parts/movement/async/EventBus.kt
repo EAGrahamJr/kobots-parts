@@ -2,11 +2,8 @@ import com.diozero.devices.Button
 import crackers.kobots.app.AppCommon
 import crackers.kobots.parts.app.io.NeoKeyHandler
 import crackers.kobots.parts.movement.async.AppScope
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
 
@@ -78,9 +75,9 @@ fun Button.startAsync(
     runScope.launch {
         var lastButton = false
         while (runCheck()) {
-            val currentState = with(Dispatchers.IO) { isPressed }
+            val currentState = withContext(Dispatchers.IO) { isPressed }
             // detect buton UP event (e.g. true->false)
-            if (!lastButton && currentState) {
+            if (lastButton && !currentState) {
                 EventBus.publish(KobotsButtonEvent(me))
             }
             lastButton = currentState
@@ -109,9 +106,9 @@ fun NeoKeyHandler.startAsync(
     runScope.launch {
         val lastButtons = MutableList(numberOfButtons) { false }
         while (runCheck()) {
-            val buttonStates = with(Dispatchers.IO) { read() }
+            val buttonStates = withContext(Dispatchers.IO) { read() }
             // detect button UP events (e.g. true->false)
-            val fired = buttonStates.zip(lastButtons) { current, last -> !current && last }
+            val fired = buttonStates.zip(lastButtons) { current, last -> last && !current }
             if (fired.any { it }) {
                 EventBus.logger.info("$me Firing buttons: $fired")
                 EventBus.publish(NeoKeyEvent(me, fired))
@@ -146,7 +143,7 @@ fun <T> startSensorPublish(
 ) {
     runScope.launch {
         while (runCheck()) {
-            val value = with(Dispatchers.IO) { readFunction() }
+            val value = withContext(Dispatchers.IO) { readFunction() }
             EventBus.publish(KobotSensorEvent(sensorName, value))
             delay(checkInterval)
         }

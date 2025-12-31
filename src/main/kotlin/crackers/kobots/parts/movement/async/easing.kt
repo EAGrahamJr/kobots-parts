@@ -44,7 +44,7 @@ suspend fun easeTo(
     easingFn: EasingFunction = linear,
     steps: Int = 50,
 ) {
-    val stepDuration = (duration.inWholeMilliseconds / steps).coerceAtLeast(10).toLong()
+    val stepDuration = (duration.inWholeMilliseconds / steps).coerceAtLeast(10)
     for (i in 0..steps) {
         val t = i.toFloat() / steps
         val easedT = easingFn(t)

@@ -125,7 +125,7 @@ open class KobotAnalogSensor(
     val stateClass: StateClass = StateClass.NONE,
     val unitOfMeasurement: String? = null,
     val suggestedPrecision: Int? = null
-) : KobotSensor<AnalogDevice, String?>(uniqueId, name, deviceIdentifier, expires, deviceClass) {
+) : KobotSensor<AnalogDevice, Double?>(uniqueId, name, deviceIdentifier, expires, deviceClass) {
 
     // do not allow over-rides: this is required for proper integration
     final override val component = "sensor"
@@ -136,10 +136,10 @@ open class KobotAnalogSensor(
         deviceClass.addDiscovery(this, unitOfMeasurement)
     }
 
-    override var currentState: String?
-        get() = sensorState.get()
+    override var currentState: Double? = null
         set(v) {
-            sensorState.set(v)
+            field = v
+            sensorState.set(v?.toString() ?: "unknown")
             sendCurrentState()
         }
 

@@ -18,71 +18,44 @@ package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.devices.lighting.PixelBuf
 import crackers.kobots.devices.lighting.WS2811
-import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 
 /**
- * Simple HomeAssistant "light" that controls a single pixel on a 1->n `PixelBuf` strand (e.g. a WS28xx LED). Note
- * that the effects **must** be in the context of a `PixelBuf` target.
- * TODO this should be just a PixelBufController with the start==end index
+ * Interface for light effectors that can be applied to a `PixelBuf` device.
+ * The parameters are: the `PixelBuf`, the starting index, and the number of pixels.
  */
-class SinglePixelLightController(
-    private val theStrand: PixelBuf,
-    private val index: Int,
-    private val effects: Map<String, PixelBuf.(index: Int) -> Any>? = null
-) : LightController {
-
-    private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
-
-    private var lastColor: WS2811.PixelColor = WS2811.PixelColor(Color.WHITE, brightness = 0.5f)
-    override val lightEffects = effects?.keys?.sorted()
-    override val controllerIcon = "mdi:lightbulb"
-    private val currentEffect = AtomicReference<String>()
-
-    // note: brightness for the kobot lights is 0-100
-    override fun current(): LightState {
-        val state = theStrand[index].color != Color.BLACK
-        return LightState(
-            state = state,
-            brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
-            color = lastColor.color,
-            effect = currentEffect.get()
-        )
-    }
-
-    override fun set(command: LightCommand) {
-        if (!command.state) {
-            theStrand[index] = Color.BLACK
-            return
-        }
-        // if the last color was "off", use the stored color
-        val currentColor = theStrand[index].let {
-            if (it.color == Color.BLACK) lastColor else it
-        }
-
-        val cb = command.brightness?.let { it / 100f } ?: currentColor.brightness
-        val color = command.color ?: currentColor.color
-        lastColor = WS2811.PixelColor(color, brightness = cb)
-        theStrand[index] = lastColor
-    }
-}
+interface PixelBufEffector : LightEffector<Triple<PixelBuf, Int, Int>>
 
 /**
- * Controls a full "strand" of `PixelBuf` (e.g. WS28xx LEDs)
- * TODO needs a start and end index
+ * Simple HomeAssistant "light" that controls a single pixel on a 1->n `PixelBuf` strand (e.g. a WS28xx LED). Note
+ * that the effects **must** be in the context of a `PixelBuf` target.
  */
-class PixelBufController(
+@Deprecated(replaceWith = ReplaceWith("PixelBufController"), message = "Use PixelBufController with count=1")
+open class SinglePixelLightController(
+    theStrand: PixelBuf,
+    index: Int,
+    effects: Set<PixelBufEffector> = emptySet()
+) : PixelBufController(theStrand, effects, index, 1)
+
+/**
+ * Controls all or part of a "strand" of `PixelBuf` (e.g. WS28xx LEDs)
+ */
+open class PixelBufController(
     private val theStrand: PixelBuf,
-    private val effects: Map<String, PixelBuf.() -> Any>? = null
+    private val effects: Set<LightEffector<Triple<PixelBuf, Int, Int>>> = emptySet(),
+    private val offset: Int = 0,
+    private val count: Int = theStrand.size
 ) : LightController {
-    private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
-    override val lightEffects = effects?.keys?.sorted()
+    override val lightEffects = effects.map { it.name }.sorted()
     override val controllerIcon = "mdi:led-strip"
 
     private var lastColor: WS2811.PixelColor = WS2811.PixelColor(Color.WHITE, brightness = 0.5f)
-    private val currentEffect = AtomicReference<String>()
+    private val currentEffect = AtomicReference<LightEffector<Triple<PixelBuf, Int, Int>>>()
+
+    // because the end is inclusive
+    private val endPixel = count + offset - 1
 
     /**
      * Finds the first non-black color or the first pixel.
@@ -92,7 +65,7 @@ class PixelBufController(
     override fun set(command: LightCommand) {
         // just black it out, do not save this "color"
         if (!command.state) {
-            theStrand fill Color.BLACK
+            theStrand[offset, endPixel] = Color.BLACK
             return
         }
 
@@ -103,16 +76,23 @@ class PixelBufController(
         val cb = command.brightness?.let { it / 100f } ?: currentColor.brightness
         // save it, send it
         lastColor = WS2811.PixelColor(color, brightness = cb)
-        theStrand fill lastColor
+        theStrand[offset, endPixel] = lastColor
+    }
+
+    override fun exec(effect: String) {
+        effects.firstOrNull { it.name == effect }?.let {
+            it start Triple(theStrand, offset, count)
+            currentEffect.set(it)
+        }
     }
 
     override fun current(): LightState {
-        val state = theStrand.get().any { it.color != Color.BLACK }
+        val state = lastColor != Color.BLACK
         return LightState(
-            state = state,
+            state = state || currentEffect.get() != null,
             brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
             color = lastColor.color,
-            effect = currentEffect.get()
+            effect = currentEffect.get()?.name
         )
     }
 }
