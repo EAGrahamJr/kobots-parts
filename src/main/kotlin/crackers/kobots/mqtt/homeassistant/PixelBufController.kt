@@ -51,7 +51,8 @@ open class PixelBufController(
     override val lightEffects = effects.map { it.name }.sorted()
     override val controllerIcon = "mdi:led-strip"
 
-    private var lastColor: WS2811.PixelColor = WS2811.PixelColor(Color.WHITE, brightness = 0.5f)
+    private val offColor = WS2811.PixelColor(Color.BLACK, brightness = 0f)
+    private var lastColor: WS2811.PixelColor = offColor
     private val currentEffect = AtomicReference<LightEffector<Triple<PixelBuf, Int, Int>>>()
 
     // because the end is inclusive
@@ -79,20 +80,15 @@ open class PixelBufController(
         theStrand[offset, endPixel] = lastColor
     }
 
-    override fun exec(effect: String) {
-        effects.firstOrNull { it.name == effect }?.let {
-            it start Triple(theStrand, offset, count)
-            currentEffect.set(it)
-        }
-    }
-
     override fun current(): LightState {
-        val state = lastColor != Color.BLACK
+        val effectInEffect = currentEffect.get()
+        val state = (offset..endPixel).any { theStrand[it].color != Color.BLACK } || effectInEffect != null
+
         return LightState(
-            state = state || currentEffect.get() != null,
+            state = state,
             brightness = if (!state) 0 else (lastColor.brightness!! * 100f).roundToInt(),
             color = lastColor.color,
-            effect = currentEffect.get()?.name
+            effect = effectInEffect?.name
         )
     }
 }
