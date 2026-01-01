@@ -1,7 +1,7 @@
 package crackers.kobots.parts.movement.async
 
 import kotlinx.coroutines.*
-import java.util.concurrent.CountDownLatch
+import kotlin.time.Duration
 
 /**
  * Scene builder for orchestrating concurrent asynchronous movements.
@@ -16,7 +16,13 @@ class SceneBuilder {
     infix fun <T : AsyncRotator> T.moveTo(rotate: Rotate.() -> Unit) {
         val params = Rotate().apply(rotate)
         actions.add {
+            if (params.startDelay > Duration.ZERO) {
+                delay(params.startDelay)
+            }
             this.rotateAsync(params.angle, params.duration, params.ease)
+            if (params.endDelay > Duration.ZERO) {
+                delay(params.endDelay)
+            }
         }
     }
 
@@ -26,8 +32,12 @@ class SceneBuilder {
      */
     infix fun <T : AsyncRotator> T.smoothly(rotate: SmoothRotate.() -> Unit) {
         val params = SmoothRotate().apply(rotate)
-        actions.add {
-            this.rotateAsync(params.angle, params.duration, params.ease)
+        this moveTo {
+            angle = params.angle
+            duration = params.duration
+            startDelay = params.startDelay
+            endDelay = params.endDelay
+            ease = params.ease
         }
     }
 
@@ -37,8 +47,12 @@ class SceneBuilder {
      */
     infix fun <T : AsyncRotator> T.withSoftLaunch(rotate: SoftLaunchRotate.() -> Unit) {
         val params = SoftLaunchRotate().apply(rotate)
-        actions.add {
-            this.rotateAsync(params.angle, params.duration, params.ease)
+        this moveTo {
+            angle = params.angle
+            duration = params.duration
+            startDelay = params.startDelay
+            endDelay = params.endDelay
+            ease = params.ease
         }
     }
 
@@ -48,8 +62,12 @@ class SceneBuilder {
      */
     infix fun <T : AsyncRotator> T.withSoftLanding(rotate: SoftLandingRotate.() -> Unit) {
         val params = SoftLandingRotate().apply(rotate)
-        actions.add {
-            this.rotateAsync(params.angle, params.duration, params.ease)
+        this moveTo {
+            angle = params.angle
+            duration = params.duration
+            startDelay = params.startDelay
+            endDelay = params.endDelay
+            ease = params.ease
         }
     }
 
@@ -58,7 +76,7 @@ class SceneBuilder {
      * Starts all actions concurrently and waits for their completion.
      */
     suspend fun invoke() = coroutineScope {
-        val startSwitch = CountDownLatch(1)
+        val startSwitch = CompletableDeferred<Unit>()
 
         val tasks = mutableListOf<Job>()
         actions.forEach { action ->
@@ -68,7 +86,7 @@ class SceneBuilder {
             }
             tasks.add(task)
         }
-        startSwitch.countDown()
+        startSwitch.complete(Unit)
         tasks.joinAll()
     }
 

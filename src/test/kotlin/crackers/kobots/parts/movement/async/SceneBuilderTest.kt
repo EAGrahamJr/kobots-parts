@@ -46,7 +46,7 @@ class SceneBuilderTest : FunSpec(
         }
 
         test("play executes all queued actions") {
-            val rotator2 = mockk<AsyncRotator>(relaxed = true)
+            val rotator2 = mockk<AsyncServoRotator>(relaxed = true)
             val builder = sceneBuilder {
                 rotator moveTo { angle = 45 }
                 rotator2 moveTo { angle = 135 }

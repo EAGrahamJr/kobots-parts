@@ -22,8 +22,17 @@ import kotlin.time.Duration.Companion.seconds
 val _defaultDuration = 2.seconds
 
 interface SceneMovement {
+    /**
+     * How long the movement should take.
+     */
     var duration: Duration
+
+    /**
+     * Easing function to use for the movement.
+     */
     var ease: EasingFunction
+    var startDelay: Duration
+    var endDelay: Duration
 }
 
 /**
@@ -32,6 +41,8 @@ interface SceneMovement {
 open class Rotate : SceneMovement {
     override var duration: Duration = _defaultDuration
     override var ease: EasingFunction = linear
+    override var startDelay: Duration = Duration.ZERO
+    override var endDelay: Duration = Duration.ZERO
     open var angle: Int = 0
 }
 

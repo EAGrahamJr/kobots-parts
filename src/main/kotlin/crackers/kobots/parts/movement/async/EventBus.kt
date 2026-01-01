@@ -1,9 +1,13 @@
+package crackers.kobots.parts.movement.async
+
 import com.diozero.devices.Button
 import crackers.kobots.app.AppCommon
 import crackers.kobots.parts.app.io.NeoKeyHandler
-import crackers.kobots.parts.movement.async.AppScope
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
 
@@ -16,7 +20,7 @@ interface KobotsEvent {
  */
 object EventBus {
     val logger = LoggerFactory.getLogger("EventBus")
-    private val _events = MutableSharedFlow<KobotsEvent>()
+    private val _events = MutableSharedFlow<KobotsEvent>(extraBufferCapacity = 100)
     val events = _events.asSharedFlow()
 
     /**
@@ -39,14 +43,14 @@ object EventBus {
         crossinline onEvent: (T) -> Unit,
     ) {
         AppScope.appScope.launch {
-            events.filterIsInstance<T>()
-                .filter { msg ->
-                    logger.info("Checking ${events.javaClass} event for ${msg.name} against $name")
-                    (msg.name == name).also {
-                        logger.info("Event `${msg.name}` == `$name` --> $it")
+            events
+                .filterIsInstance<T>()
+                .filter { msg -> msg.name == name }
+                .collect { event ->
+                    launch(Dispatchers.Default) {
+                        onEvent(event)
                     }
                 }
-                .collectLatest { event -> onEvent(event) }
         }
     }
 }
