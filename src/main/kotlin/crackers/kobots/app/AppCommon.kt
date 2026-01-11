@@ -19,6 +19,8 @@ package crackers.kobots.app
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import crackers.hassk.HAssKClient
+import crackers.kobots.app.AppCommon.applicationRunning
+import crackers.kobots.app.AppCommon.awaitTermination
 import crackers.kobots.mqtt.KobotsMQTT
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -113,10 +115,11 @@ object AppCommon {
         KobotsMQTT(InetAddress.getLocalHost().hostName, applicationConfig.getString("mqtt.broker"))
     }
 
-    fun <F> ignoreErrors(executionBlock: () -> F?, logIt: Boolean = false): F? = try {
+    @Deprecated("Use runCatching instead", ReplaceWith("runCatching { executionBlock() }.getOrElse { null }"))
+    fun <F> ignoreErrors(executionBlock: () -> F?, logIt: Boolean = false): F? = runCatching {
         executionBlock()
-    } catch (t: Throwable) {
-        if (logIt) logger.error("Error trying to ignore: ${t.localizedMessage}")
+    }.getOrElse {
+        if (logIt) logger.error("Error trying to ignore: ${it.localizedMessage}")
         null
     }
 
