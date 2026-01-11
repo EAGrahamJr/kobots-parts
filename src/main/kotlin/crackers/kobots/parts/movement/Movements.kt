@@ -84,6 +84,9 @@ open class LinearMovement(
     }
 }
 
+/**
+ * Maps "real world" angles to "device" angles for a geared mechanism.
+ */
 internal fun gearedAngleTable(physicalRange: IntRange, deviceRange: IntRange): SortedMap<Int, Int> {
     require(physicalRange.first < physicalRange.last) { "physicalRange '$physicalRange' must be increasing" }
 
@@ -94,4 +97,44 @@ internal fun gearedAngleTable(physicalRange: IntRange, deviceRange: IntRange): S
         val normalizedPosition = (angle - physicalRange.first).toDouble() / physicalScope
         (deviceRange.first + normalizedPosition * servoScope).roundToInt()
     }.toSortedMap()
+}
+
+/**
+ * Calculates a "physical" angle to steps mapping for a geared stepper motor. This is used to translate desired physical
+ * angles into the corresponding number of steps the stepper motor must take, considering the gear ratio. This is obviously
+ * an approximation since stepper motors move in discrete steps and do not have the concept of "state".
+ */
+class StepMapper(stepsPerRotation: Int, gearRatio: Float = 1f) {
+    protected val degreesToSteps: Map<Int, Int>
+    protected val stepsToDegrees: Map<Int, MutableList<Int>>
+
+    init {
+        require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero." }
+        val stepRatio = stepsPerRotation * gearRatio / 360
+
+        // calculate how many steps off of "zero" each degree is
+        stepsToDegrees = mutableMapOf()
+        degreesToSteps = (0..359).associate { deg: Int ->
+            val steps = (deg * stepRatio).roundToInt()
+            stepsToDegrees.getOrPut(steps) { mutableListOf() }.add(deg)
+            deg to steps
+        }
+    }
+
+    /**
+     * Convert degrees to steps. Compensates for negative degrees and degrees over 360.
+     */
+    fun degreesToSteps(degrees: Int): Int {
+        val modDegrees = ((degrees % 360) + 360) % 360
+        return degreesToSteps[modDegrees] ?: throw IllegalArgumentException("No step mapping for $degrees degrees")
+    }
+
+    /**
+     * Convert steps to degrees. Returns the range of possible degrees for the given number of steps. Note that not
+     * all steps will have a corresponding degree (due to rounding), so this may return `null`.
+     */
+    fun stepsToDegrees(steps: Int): List<Int>? {
+        val modSteps = steps % stepsToDegrees.size
+        return stepsToDegrees[modSteps]
+    }
 }

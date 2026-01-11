@@ -63,21 +63,7 @@ open class BasicStepperRotator(
     stepsPerRotation: Int = theStepper.stepsPerRotation.toInt()
 ) : Rotator(), StepperActuator {
 
-    protected val degreesToSteps: Map<Int, Int>
-    protected val stepsToDegrees: Map<Int, MutableList<Int>>
-
-    init {
-        require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero." }
-        val stepRatio = stepsPerRotation * gearRatio / 360
-
-        // calculate how many steps off of "zero" each degree is
-        stepsToDegrees = mutableMapOf()
-        degreesToSteps = (0..359).associate { deg: Int ->
-            val steps = (deg * stepRatio).roundToInt()
-            stepsToDegrees.getOrPut(steps) { mutableListOf() }.add(deg)
-            deg to steps
-        }
-    }
+    protected val protractor = StepMapper(stepsPerRotation, gearRatio)
 
     protected val forwardDirection = if (reversed) BACKWARD else FORWARD
     protected val backwardDirection = if (reversed) FORWARD else BACKWARD
@@ -102,7 +88,7 @@ open class BasicStepperRotator(
         if (angleLocation == realAngle) return true
 
         // convert to steps
-        val destinationSteps = degreesToSteps[realAngle]!!
+        val destinationSteps = protractor.degreesToSteps(realAngle)
         // and if steps match, also good
         if (destinationSteps == stepsLocation) {
             angleLocation = realAngle
@@ -113,11 +99,11 @@ open class BasicStepperRotator(
         if (destinationSteps < stepsLocation) {
             stepsLocation--
             theStepper.step(backwardDirection, stepStyle)
-            angleLocation = stepsToDegrees[stepsLocation]?.min() ?: angleLocation
+            angleLocation = protractor.stepsToDegrees(stepsLocation)?.min() ?: angleLocation
         } else {
             stepsLocation++
             theStepper.step(forwardDirection, stepStyle)
-            angleLocation = stepsToDegrees[stepsLocation]?.max() ?: angleLocation
+            angleLocation = protractor.stepsToDegrees(stepsLocation)?.max() ?: angleLocation
         }
         // are we there yet?
         return (destinationSteps == stepsLocation).also {
@@ -152,10 +138,10 @@ abstract class LimitedRotator : Rotator() {
 
     companion object {
         /**
-         * Create a [LimitedRotator] with a 1:1 ratio
+         * Create a [LimitedRotator] with a 1:1 ratio. The range defaults to the servo's trim range.
          */
         fun ServoDevice.rotator(
-            physicalRange: IntRange
+            physicalRange: IntRange = this.trim.minAngle..this.trim.maxAngle,
         ): LimitedRotator = ServoRotator(this, physicalRange)
 
         /**
