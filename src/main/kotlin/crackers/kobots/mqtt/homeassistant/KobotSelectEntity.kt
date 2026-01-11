@@ -40,6 +40,18 @@ open class KobotSelectEntity(
 
     private lateinit var lastOption: String
 
+    /**
+     * Programmatically set the option for this select entity. If `option` is `null`, then the option is set to "None"
+     * and no action is taken.
+     */
+    open fun setOption(option: String? = null) {
+        lastOption = option?.let {
+            selectHandler.executeOption(option)
+            option
+        } ?: "None"
+        sendCurrentState()
+    }
+
     override fun currentState() = if (::lastOption.isInitialized) lastOption else "None"
 
     override fun handleCommand(payload: String) {
