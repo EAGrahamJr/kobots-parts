@@ -105,12 +105,14 @@ internal fun gearedAngleTable(physicalRange: IntRange, deviceRange: IntRange): S
  * an approximation since stepper motors move in discrete steps and do not have the concept of "state".
  */
 class StepMapper(stepsPerRotation: Int, gearRatio: Float = 1f) {
-    protected val degreesToSteps: Map<Int, Int>
-    protected val stepsToDegrees: Map<Int, MutableList<Int>>
+    private val degreesToSteps: Map<Int, Int>
+    private val stepsToDegrees: Map<Int, MutableList<Int>>
+
+    private val stepRatio = stepsPerRotation * gearRatio / 360
 
     init {
-        require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero." }
-        val stepRatio = stepsPerRotation * gearRatio / 360
+        require(gearRatio > 0f) { "gearRatio '$gearRatio' must be greater than zero (0)." }
+        require(stepsPerRotation > 1) { "stepsPerRotation '$stepsPerRotation' must be greater than one (1)." }
 
         // calculate how many steps off of "zero" each degree is
         stepsToDegrees = mutableMapOf()
@@ -131,10 +133,12 @@ class StepMapper(stepsPerRotation: Int, gearRatio: Float = 1f) {
 
     /**
      * Convert steps to degrees. Returns the range of possible degrees for the given number of steps. Note that not
-     * all steps will have a corresponding degree (due to rounding), so this may return `null`.
+     * all steps will have a corresponding degree (due to rounding), so this uses the "closest" minimum or last.
      */
     fun stepsToDegrees(steps: Int): List<Int>? {
-        val modSteps = steps % stepsToDegrees.size
-        return stepsToDegrees[modSteps]
+        // find the smallest non-negative key closer to modSteps
+        val keys = stepsToDegrees.keys.sorted()
+        val closestKey = keys.lastOrNull { it <= steps } ?: keys.last()
+        return stepsToDegrees[closestKey]
     }
 }

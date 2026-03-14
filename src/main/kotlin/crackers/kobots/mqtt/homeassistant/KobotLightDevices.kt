@@ -18,8 +18,8 @@ package crackers.kobots.mqtt.homeassistant
 
 import crackers.kobots.mqtt.homeassistant.LightColor.Companion.toLightColor
 import crackers.kobots.mqtt.homeassistant.LightCommand.Companion.commandFrom
-import crackers.kobots.parts.miredsToColor
-import crackers.kobots.parts.toMireds
+import crackers.kobots.parts.kelvinToRGB
+import crackers.kobots.parts.toKelvin
 import org.json.JSONObject
 import java.awt.Color
 import java.awt.Color.BLACK
@@ -72,7 +72,8 @@ data class LightState(
             put("state", if (state) "ON" else "OFF")
             put("brightness", (brightness * 255f / 100f).roundToInt())
             put("color_mode", LightColorMode.RGB.name.lowercase())
-            put("color_temp", color.toMireds())
+            // per HA spec, `mireds` is no longer used
+            put("color_temp_kelvin", color.toKelvin())
             effect?.let { e -> put("effect", e) }
         }
     }
@@ -108,7 +109,8 @@ data class LightCommand(
             val brightness = takeIf { has("brightness") }?.let { getInt("brightness") * 100f / 255f }?.roundToInt()
 
             // this is in mireds, so we need to convert to Kelvin
-            val colorTemp = takeIf { has("color_temp") }?.let { getInt("color_temp").miredsToColor() }
+            // per HA spec, `mireds` is no longer used
+            val colorTemp = takeIf { has("color_temp_kelvin") }?.let { getInt("color_temp_kelvin").kelvinToRGB() }
 
             val color = optJSONObject("color")?.let {
                 Color(it.optInt("r"), it.optInt("g"), it.optInt("b"))

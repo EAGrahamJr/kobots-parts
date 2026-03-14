@@ -4,11 +4,9 @@ import com.diozero.devices.Button
 import crackers.kobots.app.AppCommon
 import crackers.kobots.parts.app.io.NeoKeyHandler
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.*
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 
 interface KobotsEvent {
@@ -16,41 +14,61 @@ interface KobotsEvent {
 }
 
 /**
- * Simple event bus for publishing and subscribing to Kobots events.
+ * Simple event bus for publishing and subscribing to Kobots events. Flows are buffered to 100 events to avoid
+ * suspending publishers.
  */
 object EventBus {
     val logger = LoggerFactory.getLogger("EventBus")
-    private val _events = MutableSharedFlow<KobotsEvent>(extraBufferCapacity = 100)
-    val events = _events.asSharedFlow()
+
+    // create separate flows per event type to reduce filtering overhead and blocking on non-related events
+    private val _events = ConcurrentHashMap<Class<out KobotsEvent>, MutableSharedFlow<KobotsEvent>>()
+
+    private fun getFlowForEvent(eventClass: Class<out KobotsEvent>): MutableSharedFlow<KobotsEvent> {
+        return _events.computeIfAbsent(eventClass) {
+            MutableSharedFlow(extraBufferCapacity = 100)
+        }
+    }
+
+    /**
+     * Get the flow for the given event class. Public due to inline reified subscribe function. Note that the flow
+     * is created if it does not already exist, but this still only returns a non-modifiable flow.
+     *
+     * @param eventClass the class of the event
+     * @return the flow for the event class
+     */
+    fun getFlow(eventClass: Class<out KobotsEvent>): SharedFlow<KobotsEvent> {
+        return getFlowForEvent(eventClass).asSharedFlow()
+    }
 
     /**
      * Publish an event to the event bus.
      *
-     * @param event the event to publish.
+     * @param event the event to publish
      */
-    suspend fun <T : KobotsEvent> publish(event: T) {
-        _events.emit(event)
+    fun <T : KobotsEvent> publish(event: T) {
+        getFlowForEvent(event::class.java).tryEmit(event)
     }
 
     /**
-     * Subscribe to events of type [T] with the given name.
+     * Subscribe to events of type [T] with the given name. Messages are delivered concurrently within the limits of
+     * the buffer size of the underlying flow.
      *
-     * @param name the name of the event to subscribe to.
-     * @param onEvent the function to call when an event is received.
+     * @param name the name of the event to subscribe to
+     * @param onEvent the function to call when an event is received
      */
     inline fun <reified T : KobotsEvent> subscribe(
         name: String,
-        crossinline onEvent: (T) -> Unit,
+        crossinline onEvent: suspend (T) -> Unit,
     ) {
-        AppScope.appScope.launch {
-            events
-                .filterIsInstance<T>()
-                .filter { msg -> msg.name == name }
-                .collect { event ->
-                    launch(Dispatchers.Default) {
+        getFlow(T::class.java).let { flow ->
+            AppScope.appScope.launch {
+                flow
+                    .filterIsInstance<T>()
+                    .filter { msg -> msg.name == name }
+                    .collect { event ->
                         onEvent(event)
                     }
-                }
+            }
         }
     }
 }
@@ -58,14 +76,14 @@ object EventBus {
 /**
  * Event published when a Kobots button is pressed.
  *
- * @param name the name of the button that was pressed.
+ * @param name the name of the button that was pressed
  */
 data class KobotsButtonEvent(override val name: String) : KobotsEvent
 
 /**
  * Start monitoring the button for press events and publish KobotsButtonEvent on press.
  *
- * @param checkInterval the interval at which to check the button state.
+ * @param checkInterval the interval at which to check the button state
  * @param runScope scope to run the application in; defaults to `AppScope.appScope`
  * @param runCheck function determines whether the app is running or not - must be thread safe; defaults to `AppCommon
  * .aplicationRunning`
@@ -96,7 +114,7 @@ data class NeoKeyEvent(override val name: String, val buttons: List<Boolean>) : 
 /**
  * Start monitoring the NeoKey buttons for press events and publish NeoKeyEvent on press.
  *
- * @param checkInterval the interval at which to check the button state.
+ * @param checkInterval the interval at which to check the button state
  * @param runScope scope to run the application in; defaults to `AppScope.appScope`
  * @param runCheck function determines whether the app is running or not - must be thread safe; defaults to `AppCommon
  * .aplicationRunning`
@@ -131,9 +149,9 @@ data class KobotSensorEvent<T>(override val name: String, val value: T) : Kobots
  * Start monitoring a sensor by periodically calling [readFunction] and publishing the result as a
  * [KobotSensorEvent].
  *
- * @param sensorName the name of the sensor.
- * @param readFunction function to read the sensor value.
- * @param checkInterval the interval at which to check the sensor.
+ * @param sensorName the name of the sensor
+ * @param readFunction function to read the sensor value
+ * @param checkInterval the interval at which to check the sensor
  * @param runScope scope to run the application in; defaults to `AppScope.appScope`
  * @param runCheck function determines whether the app is running or not - must be thread safe; defaults to `AppCommon
  * .aplicationRunning`

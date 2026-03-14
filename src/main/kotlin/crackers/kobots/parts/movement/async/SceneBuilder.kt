@@ -75,7 +75,7 @@ class SceneBuilder {
     /**
      * Starts all actions concurrently and waits for their completion.
      */
-    suspend fun invoke() = coroutineScope {
+    suspend operator fun invoke() = coroutineScope {
         val startSwitch = CompletableDeferred<Unit>()
 
         val tasks = mutableListOf<Job>()

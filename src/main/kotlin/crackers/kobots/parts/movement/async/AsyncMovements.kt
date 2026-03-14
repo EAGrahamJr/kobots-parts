@@ -16,6 +16,7 @@
 
 package crackers.kobots.parts.movement.async
 
+import crackers.kobots.app.AppCommon
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -65,4 +66,34 @@ open class SoftLaunchRotate : Rotate() {
  */
 open class SoftLandingRotate : Rotate() {
     final override var ease: EasingFunction = softLanding
+}
+
+interface AsyncActuator {
+    /**
+     * Set a kill switch function that can interrupt the rotation. This will cause an exception to be thrown if the
+     * function returns true during rotation.
+     */
+    suspend fun myLittleKillSwitch(): Boolean = false
+
+    /**
+     * Return some notion of the "current" position/value of the actuator.
+     */
+    val current: Int
+
+    /**
+     * Check whether the movement should be stopped, throwing an InterruptedException if so.
+     */
+    suspend fun stopCheck(location: Int) {
+        // check for interrupts
+        if (myLittleKillSwitch())
+            throw InterruptedException("Translation to $location interrupted by kill switch")
+        if (!AppCommon.applicationRunning)
+            throw InterruptedException("Translation to $location interrupted by application shutdown")
+    }
+
+    suspend fun softLanding(target: Int, time: Duration)
+
+    suspend fun softLaunch(target: Int, time: Duration)
+
+    suspend fun smoothMove(target: Int, time: Duration)
 }

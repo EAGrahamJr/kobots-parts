@@ -6,8 +6,8 @@ plugins {
     // TODO IDEA formatting != "official" (wtf guys)
 //    id("org.jmailen.kotlinter") version "3.12.0"
     id("org.jetbrains.dokka") version "1.8.20"
-   id("crackers.buildstuff.library-publish") version "1.3.0"
-   id("crackers.buildstuff.simple-semver") version "1.3.0"
+    id("crackers.buildstuff.library-publish") version "1.3.0"
+    id("crackers.buildstuff.simple-semver") version "1.3.0"
     id("com.github.ben-manes.versions") version "0.53.0"
 }
 
@@ -19,6 +19,7 @@ repositories {
 val DIOZERO_VER = "1.4.1"
 val DEVICES_VER = "0.2+"
 val HASSK_VER = "0+"
+val KOTEST_VER = "6.0.3"
 
 group = "crackers.kobots"
 
@@ -35,8 +36,9 @@ dependencies {
     compileOnly("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 
-    testImplementation("io.kotest:kotest-runner-junit5:6.0.3")
-    testImplementation("io.kotest:kotest-extensions-junitxml:6.0.3")
+    testImplementation("io.kotest:kotest-runner-junit5:$KOTEST_VER")
+    testImplementation("io.kotest:kotest-extensions-junitxml:$KOTEST_VER")
+    testImplementation("io.kotest:kotest-property:$KOTEST_VER")
     testImplementation("io.mockk:mockk:1.14.5")
     testImplementation("ch.qos.logback:logback-classic:1.5.19")
 

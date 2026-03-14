@@ -136,7 +136,13 @@ object AppCommon {
     }
 
     fun List<Startable>.convenientShutdownHook(logErrors: Boolean = false) {
-        forEach { ignoreErrors(it::stop, logErrors) }
+        forEach {
+            runCatching {
+                it.stop()
+            }.onFailure {
+                if (logErrors) logger.error("Error stopping ${it.localizedMessage}")
+            }
+        }
     }
 
     /**
