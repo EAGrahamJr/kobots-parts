@@ -17,6 +17,7 @@
 package crackers.kobots.parts.movement.async
 
 import crackers.kobots.app.AppCommon
+import org.slf4j.Logger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -70,6 +71,11 @@ open class SoftLandingRotate : Rotate() {
 
 interface AsyncActuator {
     /**
+     * Allows an implementation to log stop-checks or not.
+     */
+    fun stopLogger(): Logger? = null
+
+    /**
      * Set a kill switch function that can interrupt the rotation. This will cause an exception to be thrown if the
      * function returns true during rotation.
      */
@@ -81,14 +87,18 @@ interface AsyncActuator {
     val current: Int
 
     /**
-     * Check whether the movement should be stopped, throwing an InterruptedException if so.
+     * Check whether the movement should be stopped, throwing a [MovementStoppedException] if so.
      */
     suspend fun stopCheck(location: Int) {
         // check for interrupts
-        if (myLittleKillSwitch())
-            throw InterruptedException("Translation to $location interrupted by kill switch")
-        if (!AppCommon.applicationRunning)
-            throw InterruptedException("Translation to $location interrupted by application shutdown")
+        if (myLittleKillSwitch()) {
+            stopLogger()?.warn("Translation to $location interrupted by kill switch")
+            throw MovementStoppedException()
+        }
+        if (!AppCommon.applicationRunning) {
+            stopLogger()?.warn("Translation to $location interrupted by application shutdown")
+            throw MovementStoppedException()
+        }
     }
 
     suspend fun softLanding(target: Int, time: Duration)

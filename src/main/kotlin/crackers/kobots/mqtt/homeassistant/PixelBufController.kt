@@ -58,10 +58,6 @@ open class PixelBufController(
     // because the end is inclusive
     private val endPixel = count + offset - 1
 
-    /**
-     * Finds the first non-black color or the first pixel.
-     */
-    private fun currentColor() = theStrand.get().find { it.color != Color.BLACK } ?: theStrand[0]
 
     override fun set(command: LightCommand) {
         // just black it out, do not save this "color"
@@ -71,12 +67,20 @@ open class PixelBufController(
         }
 
         // need to be able to "resume" the last color set if it wasn't turned off
-        val currentColor = currentColor().let { if (it.color == Color.BLACK) lastColor else it }
-        val color = command.color ?: currentColor.color
+        // find the first non-black pixel; if it's not found; use the last color
+        // if that's also "still black" (e.g. state is off), defaults to Color.WHITE
+        val strandColor = (offset..endPixel)
+            .map { theStrand[it] }
+            .firstOrNull { it.color != Color.BLACK }
+            ?: lastColor
+        val currentColor = if (strandColor == offColor) WS2811.PixelColor(Color.WHITE, brightness = 1f) else strandColor
+
+        val colorToSend = command.color ?: currentColor.color
         // if there's a brightness, otherwise "resume" again
         val cb = command.brightness?.let { it / 100f } ?: currentColor.brightness
+
         // save it, send it
-        lastColor = WS2811.PixelColor(color, brightness = cb)
+        lastColor = WS2811.PixelColor(colorToSend, brightness = cb)
         theStrand[offset, endPixel] = lastColor
     }
 

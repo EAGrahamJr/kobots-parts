@@ -4,6 +4,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 typealias EasingFunction = (Float) -> Float
 typealias UpdateFunction = suspend (Float) -> Unit
@@ -36,20 +37,32 @@ val bounce: EasingFunction = { t ->
     }
 }
 
+/**
+ * Allows for way for the update function to terminate cleanly.
+ */
+class MovementStoppedException() : RuntimeException()
+
+/**
+ * Run an [updateFn] using an [easingFn] for a specified [duration].
+ */
 suspend fun easeTo(
     start: Float,
     end: Float,
     duration: Duration,
     updateFn: UpdateFunction,
     easingFn: EasingFunction = linear,
-    steps: Int = 50,
+    steps: Int = 10,
 ) {
     val stepDuration = (duration.inWholeMilliseconds / steps).coerceAtLeast(10)
     for (i in 0..steps) {
         val t = i.toFloat() / steps
         val easedT = easingFn(t)
         val value = start + (end - start) * easedT
-        updateFn(value)
-        delay(stepDuration)
+        try {
+            updateFn(value)
+        } catch (_: MovementStoppedException) {
+            break
+        }
+        delay(stepDuration.milliseconds)
     }
 }

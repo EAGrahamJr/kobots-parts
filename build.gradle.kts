@@ -3,8 +3,7 @@ import crackers.buildstuff.semver.SimpleSemverVersion
 plugins {
     kotlin("jvm") version "2.3.0"
     idea
-    // TODO IDEA formatting != "official" (wtf guys)
-//    id("org.jmailen.kotlinter") version "3.12.0"
+//    id("org.jmailen.kotlinter") version "5.4.2"
     id("org.jetbrains.dokka") version "1.8.20"
     id("crackers.buildstuff.library-publish") version "1.3.0"
     id("crackers.buildstuff.simple-semver") version "1.3.0"
