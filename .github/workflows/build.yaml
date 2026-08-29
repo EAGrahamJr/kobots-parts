@@ -48,16 +48,16 @@ jobs:
           cd gradle-scripts
           ./gradlew --no-daemon --quiet build publishToMavenLocal
       # diozero
-      #      - name: Checkout and build 'diozero'
-      #        uses: actions/checkout@v4
-      #        with:
-      #          repository: EAGrahamJr/diozero
-      #          ref: main
-      #          path: diozero
-      #      - name: Build diozero
-      #        run: |
-      #          cd diozero
-      #          mvn --quiet --batch-mode -DskipTests install
+      - name: Checkout and build 'diozero'
+        uses: actions/checkout@v4
+        with:
+          repository: EAGrahamJr/diozero
+          ref: main
+          path: diozero
+      - name: Build diozero
+        run: |
+          cd diozero
+          mvn --quiet --batch-mode -DskipTests install
       # hassK
       - name: Checkout and build hassk
         uses: actions/checkout@v4
