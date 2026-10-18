@@ -85,7 +85,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: ./gradlew $GRADLE_ARGS build dokkaJavadoc
+        run: ./gradlew $GRADLE_ARGS build dokkaGeneratePublicationJavadoc
       - name: Test Summary
         uses: dorny/test-reporter@v1.9.1
         with:

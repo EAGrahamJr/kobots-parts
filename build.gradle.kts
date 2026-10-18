@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "2.4.21"
     idea
 //    id("org.jmailen.kotlinter") version "5.4.2"
-    id("org.jetbrains.dokka") version "2.2.0"
+    id("org.jetbrains.dokka-javadoc") version "2.2.0"
     id("crackers.buildstuff.library-publish") version "1.3.0"
     id("crackers.buildstuff.simple-semver") version "1.3.0"
     id("io.github.ben-manes.versions") version "0.66.0"
@@ -68,6 +68,12 @@ kotlin {
 val semver: Provider<SimpleSemverVersion> by project
 version = semver.get().toString()
 
+dokka {
+    dokkaPublications.named("javadoc") {
+        outputDirectory.set(layout.buildDirectory.dir("docs"))
+    }
+}
+
 tasks {
     build {
 //        dependsOn("formatKotlin")
@@ -81,23 +87,11 @@ tasks {
     javadoc {
         mustRunAfter("test")
     }
-    // make docs
-    dokkaJavadoc {
+    dokkaGeneratePublicationJavadoc {
         mustRunAfter("javadoc")
-        outputDirectory.set(file("$projectDir/build/docs"))
     }
     javadocJar {
-        mustRunAfter("dokkaJavadoc")
-        include("$projectDir/build/docs")
-    }
-    // jar docs
-    register<Jar>("dokkaJavadocJar") {
-        dependsOn(dokkaJavadoc)
-        from(dokkaJavadoc.flatMap { it.outputDirectory })
-        archiveClassifier.set("javadoc")
-    }
-    generateMetadataFileForLibraryPublication {
-        mustRunAfter("dokkaJavadocJar")
+        from(dokkaGeneratePublicationJavadoc.flatMap { it.outputDirectory })
     }
 
     register("depSize") {
