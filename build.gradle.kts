@@ -4,10 +4,10 @@ plugins {
     kotlin("jvm") version "2.4.21"
     idea
 //    id("org.jmailen.kotlinter") version "5.4.2"
-    id("org.jetbrains.dokka") version "1.8.20"
+    id("org.jetbrains.dokka") version "2.2.0"
     id("crackers.buildstuff.library-publish") version "1.3.0"
     id("crackers.buildstuff.simple-semver") version "1.3.0"
-    id("com.github.ben-manes.versions") version "0.53.0"
+    id("com.github.ben-manes.versions") version "0.66.0"
 }
 
 repositories {
@@ -15,39 +15,45 @@ repositories {
     mavenLocal()
 }
 
-val DIOZERO_VER = "1.4.2"
-val DEVICES_VER = "0.2+"
-val HASSK_VER = "0+"
-val KOTEST_VER = "6.0.3"
 
 group = "crackers.kobots"
 
 dependencies {
+    val DEVICES_VER = "0.2+"
+    val HASSK_VER = "0+"
+
+    val MQTT_VER = "1.2.5"
+    val COROUT_VER = "1.11.0"
+
+    val KOTEST_VER = "6.2.6"
+    val JSON_VER = "20260814"
+    val TYPESAVE_VER = "1.4.9"
+
     // these are likely to be the ones in use
     compileOnly("crackers.kobots:kobots-devices:$DEVICES_VER")
-    compileOnly("org.json:json:20250517")
-    compileOnly("com.typesafe:config:1.4.5")
+    compileOnly("org.json:json:$JSON_VER")
+    compileOnly("com.typesafe:config:$TYPESAVE_VER")
 
     // optional parts
     compileOnly("crackers.automation:hassk:$HASSK_VER") {
         exclude(group = "ch.qos.logback")
     }
-    compileOnly("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
-    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    compileOnly("org.eclipse.paho:org.eclipse.paho.mqttv5.client:$MQTT_VER")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:$COROUT_VER")
 
     testImplementation("io.kotest:kotest-runner-junit5:$KOTEST_VER")
     testImplementation("io.kotest:kotest-extensions-junitxml:$KOTEST_VER")
     testImplementation("io.kotest:kotest-property:$KOTEST_VER")
-    testImplementation("io.mockk:mockk:1.14.5")
-    testImplementation("ch.qos.logback:logback-classic:1.5.19")
+    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("ch.qos.logback:logback-classic:1.6.5")
 
     // re-create all the depndencies for testing
     testImplementation("crackers.kobots:kobots-devices:$DEVICES_VER")
     testImplementation("crackers.automation:hassk:$HASSK_VER")
-    testImplementation("org.json:json:20250517")
-    testImplementation("com.typesafe:config:1.4.5")
-    testImplementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:1.2.5")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    testImplementation("org.json:json:$JSON_VER")
+    testImplementation("com.typesafe:config:$TYPESAVE_VER")
+    testImplementation("org.eclipse.paho:org.eclipse.paho.mqttv5.client:$MQTT_VER")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$COROUT_VER")
 }
 
 kotlin {
@@ -104,6 +110,10 @@ tasks {
             logger.warn("supposed version $version")
         }
     }
+    dependencyUpdates {
+        rejectPreReleases = true
+    }
+
 }
 
 defaultTasks("clean", "build", "libraryDistribution")

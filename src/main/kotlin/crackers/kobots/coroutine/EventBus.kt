@@ -19,14 +19,11 @@ package crackers.kobots.coroutine
 import com.diozero.devices.Button
 import crackers.kobots.app.AppCommon
 import crackers.kobots.parts.app.io.NeoKeyHandler
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
@@ -125,10 +122,10 @@ data class KobotsButtonEvent(override val name: String) : KobotsEvent
 fun Button.startAsync(
     checkInterval: Duration,
     runCheck: () -> Boolean = { AppCommon.applicationRunning }
-) {
+): Job {
     val me = this.name
     var lastButton = false
-    AppScope.scheduleWithFixedDelay(checkInterval, checkInterval, runCheck = runCheck, block = {
+    return AppScope.scheduleWithFixedDelay(checkInterval, checkInterval, runCheck = runCheck, block = {
         val currentState = isPressed
         // detect button UP event (e.g. true->false)
         if (lastButton && !currentState) {
@@ -151,10 +148,10 @@ data class NeoKeyEvent(override val name: String, val buttons: List<Boolean>) : 
 fun NeoKeyHandler.startAsync(
     checkInterval: Duration,
     runCheck: () -> Boolean = { AppCommon.applicationRunning }
-) {
+): Job {
     val me = this.name
     val lastButtons = MutableList(numberOfButtons) { false }
-    AppScope.scheduleWithFixedDelay(checkInterval, checkInterval, runCheck = runCheck, block = {
+    return AppScope.scheduleWithFixedDelay(checkInterval, checkInterval, runCheck = runCheck, block = {
         val buttonStates = read()
         // detect button UP events (e.g. true->false)
         val fired = buttonStates.zip(lastButtons) { current, last -> last && !current }
@@ -186,8 +183,8 @@ fun <T> startSensorPublish(
     readFunction: () -> T,
     checkInterval: Duration,
     runCheck: () -> Boolean = { AppCommon.applicationRunning }
-) {
-    AppScope.scheduleWithFixedDelay(checkInterval, checkInterval, runCheck = runCheck, block = {
+): Job {
+    return AppScope.scheduleWithFixedDelay(checkInterval, checkInterval, runCheck = runCheck, block = {
         val value = readFunction()
         EventBus.publish(KobotSensorEvent(sensorName, value))
     })

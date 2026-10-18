@@ -31,6 +31,9 @@ concurrency:
 jobs:
   just-build:
     runs-on: ubuntu-latest
+    env:
+      GRADLE_ARGS: --no-daemon --no-build-cache --no-configuration-cache
+      DEP_PUB: --quiet build publishToMavenLocal
     steps:
       - name: Java
         uses: actions/setup-java@v4
@@ -46,7 +49,7 @@ jobs:
       - name: Build plugins
         run: |
           cd gradle-scripts
-          ./gradlew --no-daemon --no-build-cache --quiet build publishToMavenLocal
+          ./gradlew $GRADLE_ARGS $DEP_PUB
       # diozero
       - name: Checkout and build 'diozero'
         uses: actions/checkout@v4
@@ -67,7 +70,7 @@ jobs:
       - name: Build hassk
         run: |
           cd hassk
-          ./gradlew --no-daemon --no-build-cache --quiet build publishToMavenLocal
+          ./gradlew $GRADLE_ARGS $DEP_PUB
       # kobots-devices
       - name: Checkout and build kobots-devices
         uses: actions/checkout@v4
@@ -77,12 +80,12 @@ jobs:
       - name: Build kobots-devices
         run: |
           cd kobots-devices
-          ./gradlew --no-daemon --no-build-cache --quiet build publishToMavenLocal
+          ./gradlew $GRADLE_ARGS $DEP_PUB
       # BUILD IT
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: ./gradlew --no-daemon --no-build-cache build dokkaJavadoc
+        run: ./gradlew $GRADLE_ARGS build dokkaJavadoc
       - name: Test Summary
         uses: dorny/test-reporter@v1.9.1
         with:
