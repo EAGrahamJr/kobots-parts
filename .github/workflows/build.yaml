@@ -46,7 +46,7 @@ jobs:
       - name: Build plugins
         run: |
           cd gradle-scripts
-          ./gradlew --no-daemon --quiet build publishToMavenLocal
+          ./gradlew --no-daemon --no-build-cache --quiet build publishToMavenLocal
       # diozero
       - name: Checkout and build 'diozero'
         uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
       - name: Build hassk
         run: |
           cd hassk
-          ./gradlew --no-daemon --quiet build publishToMavenLocal
+          ./gradlew --no-daemon --no-build-cache --quiet build publishToMavenLocal
       # kobots-devices
       - name: Checkout and build kobots-devices
         uses: actions/checkout@v4
@@ -77,12 +77,12 @@ jobs:
       - name: Build kobots-devices
         run: |
           cd kobots-devices
-          ./gradlew --no-daemon --quiet build publishToMavenLocal
+          ./gradlew --no-daemon --no-build-cache --quiet build publishToMavenLocal
       # BUILD IT
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build
-        run: ./gradlew --no-daemon build dokkaJavadoc
+        run: ./gradlew --no-daemon --no-build-cache build dokkaJavadoc
       - name: Test Summary
         uses: dorny/test-reporter@v1.9.1
         with:
