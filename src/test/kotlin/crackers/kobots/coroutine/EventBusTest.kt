@@ -17,7 +17,6 @@
 package crackers.kobots.coroutine
 
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.engine.runBlocking
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
 import java.util.concurrent.CountDownLatch
@@ -33,10 +32,8 @@ class EventBusTest : FunSpec(
                 gotMessage.countDown()
             }
             val event = KobotsButtonEvent("TestButton")
-            runBlocking {
-                delay(50.milliseconds)
-                EventBus.publish(event)
-            }
+            delay(50.milliseconds)
+            EventBus.publish(event)
             gotMessage.await(200, TimeUnit.MILLISECONDS) shouldBe true
         }
         test("multiple subscribers get all events") {
@@ -49,10 +46,8 @@ class EventBusTest : FunSpec(
                 latch2.countDown()
             }
             val event = KobotsButtonEvent("MultiTest")
-            runBlocking {
-                delay(50.milliseconds)
-                EventBus.publish(event)
-            }
+            delay(50.milliseconds)
+            EventBus.publish(event)
             latch1.await(200, TimeUnit.MILLISECONDS) shouldBe true
             latch2.await(200, TimeUnit.MILLISECONDS) shouldBe true
         }
@@ -68,11 +63,9 @@ class EventBusTest : FunSpec(
             }
             val eventA = KobotsButtonEvent("SameName")
             val eventB = KobotSensorEvent("SameName", "Hello")
-            runBlocking {
-                delay(50.milliseconds)
-                EventBus.publish(eventA)
-                EventBus.publish(eventB)
-            }
+            delay(50.milliseconds)
+            EventBus.publish(eventA)
+            EventBus.publish(eventB)
             latchA.await(200, TimeUnit.MILLISECONDS) shouldBe false
             latchB.await(200, TimeUnit.MILLISECONDS) shouldBe true
         }

@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.dokka") version "2.2.0"
     id("crackers.buildstuff.library-publish") version "1.3.0"
     id("crackers.buildstuff.simple-semver") version "1.3.0"
-    id("com.github.ben-manes.versions") version "0.66.0"
+    id("io.github.ben-manes.versions") version "0.66.0"
 }
 
 repositories {
