@@ -3,16 +3,21 @@ package crackers.kobots.parts.movement.async
 import com.diozero.api.ServoDevice
 import com.diozero.devices.sandpit.motor.BasicStepperController
 import com.diozero.devices.sandpit.motor.BasicStepperMotor
+import com.diozero.devices.sandpit.motor.StepperMotorInterface.Direction
 import crackers.kobots.parts.movement.BasicStepperRotator
 import crackers.kobots.parts.movement.gearedAngleTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import java.lang.Math.abs
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.math.roundToInt
 import kotlin.time.Duration
 
@@ -51,18 +56,13 @@ interface AsyncRotator : AsyncActuator {
  *
  * @param theServo The servo device to be controlled.
  * @param physicalRange The physical range of motion for the servo in degrees.
- * @param servoRange The actual range of angles the servo can achieve.
+ * @param servoRange The actual range of angles the servo can achieve (defaults to `physicalRange`).
  */
 open class AsyncServoRotator(
     val theServo: ServoDevice,
     val physicalRange: IntRange,
-    protected val servoRange: IntRange,
+    val servoRange: IntRange = physicalRange,
 ) : AsyncRotator {
-    /**
-     * Secondary constructor that assumes the servo's physical range matches its servo range.
-     */
-    constructor(theServo: ServoDevice, servoRange: IntRange) : this(theServo, servoRange, servoRange)
-
     protected val realAngles: SortedMap<Int, Int> = gearedAngleTable(physicalRange, servoRange)
 
     fun init() {
@@ -89,7 +89,7 @@ open class AsyncServoRotator(
      * @param time Duration of the rotation.
      * @param easing Easing function to use for the rotation.
      */
-    suspend override fun rotateAsync(
+    override suspend fun rotateAsync(
         angle: Int,
         time: Duration,
         easing: EasingFunction,
@@ -151,10 +151,10 @@ open class AsyncServoRotator(
  */
 open class AsyncStepperRotator(
     val theStepper: BasicStepperMotor,
-    gearRatio: Float = 1f,
-    reversed: Boolean = false,
-    stepStyle: BasicStepperController.StepStyle = BasicStepperController.StepStyle.SINGLE,
-    private val stepPause: Duration = Duration.ZERO,
+    val gearRatio: Float = 1f,
+    val reversed: Boolean = false,
+    val stepStyle: BasicStepperController.StepStyle = BasicStepperController.StepStyle.SINGLE,
+    val stepPause: Duration = Duration.ZERO,
 ) : AsyncRotator {
 
     val wrapped = BasicStepperRotator(
@@ -198,5 +198,44 @@ open class AsyncStepperRotator(
      */
     open fun release() {
         wrapped.release()
+    }
+}
+
+/**
+ * Calibrate the stepper by running it out 1/4 of it's **geared** arc and then back in, checking the stop function.
+ * This is a blocking function that will not return until the calibration is complete or the stop function returns true.
+ *
+ * @param stopFunction A function that returns true if the calibration should be stopped.
+ */
+fun AsyncStepperRotator.runCalibration(stopFunction: () -> Boolean) {
+    val theLock = ReentrantLock()
+    val logger = LoggerFactory.getLogger("Calibration")
+
+    theLock.withLock {
+        runBlocking {
+            logger.warn("Calibration starting")
+            runCatching {
+                // run the stepper out 1/4 of it's **geared** arc
+                val out = (theStepper.stepsPerRotation * gearRatio / 4).toInt()
+                val (outDirection, inDirection) = if (reversed)
+                    Pair(Direction.BACKWARD, Direction.FORWARD)
+                else
+                    Pair(Direction.FORWARD, Direction.BACKWARD)
+                repeat(out) {
+                    theStepper.step(outDirection)
+                    delay(stepPause)
+                }
+                // bring it back checking the stop function
+                for (ignored in 0 until out * 2) {
+                    if (stopFunction()) break
+                    theStepper.step(inDirection)
+                    delay(stepPause)
+                }
+            }.map {
+                logger.warn("Calibration completed")
+            }.onFailure {
+                logger.error("Calibration failed: ${it.localizedMessage}")
+            }
+        }
     }
 }

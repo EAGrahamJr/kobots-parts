@@ -19,9 +19,6 @@ package crackers.kobots.parts.movement.async
 import crackers.kobots.app.AppCommon
 import org.slf4j.Logger
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
-
-val _defaultDuration = 2.seconds
 
 interface SceneMovement {
     /**
@@ -33,18 +30,14 @@ interface SceneMovement {
      * Easing function to use for the movement.
      */
     var ease: EasingFunction
-    var startDelay: Duration
-    var endDelay: Duration
 }
 
 /**
  * Parameter holder class for moveTo DSL
  */
 open class Rotate : SceneMovement {
-    override var duration: Duration = _defaultDuration
+    override var duration: Duration = Duration.ZERO
     override var ease: EasingFunction = linear
-    override var startDelay: Duration = Duration.ZERO
-    override var endDelay: Duration = Duration.ZERO
     open var angle: Int = 0
 }
 
@@ -69,6 +62,10 @@ open class SoftLandingRotate : Rotate() {
     final override var ease: EasingFunction = softLanding
 }
 
+/**
+ * An actuator is a device that has a position or value that can be changed to a target position or value over
+ * time. This interface defines the basic asynchronous movement operations that can be performed on an actuator.
+ */
 interface AsyncActuator {
     /**
      * Allows an implementation to log stop-checks or not.

@@ -1,5 +1,6 @@
 package crackers.kobots.parts.movement.async
 
+import crackers.kobots.coroutine.AppScope
 import kotlinx.coroutines.*
 import kotlin.time.Duration
 
@@ -9,22 +10,32 @@ import kotlin.time.Duration
 class SceneBuilder {
     private val actions = mutableListOf<suspend () -> Unit>()
 
+    var defaultDuration: Duration? = null
+
     /**
      * DSL construct for moveTo with named parameter assignment syntax.
      * Usage: `rotator moveTo { angle = 90; duration = 2.seconds; ease = linear }`
      */
     infix fun <T : AsyncRotator> T.moveTo(rotate: Rotate.() -> Unit) {
         val params = Rotate().apply(rotate)
-        actions.add {
-            if (params.startDelay > Duration.ZERO) {
-                delay(params.startDelay)
-            }
+        if (params.duration == Duration.ZERO) {
+            params.duration = defaultDuration ?: Duration.ZERO
+        }
+        actions += {
             this.rotateAsync(params.angle, params.duration, params.ease)
-            if (params.endDelay > Duration.ZERO) {
-                delay(params.endDelay)
-            }
         }
     }
+
+    /**
+     * Add a pause/delay in the scene with a specified duration.
+     * Usage: `pause 1.seconds` or `pause 500.milliseconds`
+     */
+    infix fun pause(duration: Duration) {
+        actions += {
+            delay(duration)
+        }
+    }
+
 
     /**
      * DSL construct for smooth movements with named parameter assignment syntax.
@@ -35,8 +46,6 @@ class SceneBuilder {
         this moveTo {
             angle = params.angle
             duration = params.duration
-            startDelay = params.startDelay
-            endDelay = params.endDelay
             ease = params.ease
         }
     }
@@ -50,8 +59,6 @@ class SceneBuilder {
         this moveTo {
             angle = params.angle
             duration = params.duration
-            startDelay = params.startDelay
-            endDelay = params.endDelay
             ease = params.ease
         }
     }
@@ -65,8 +72,6 @@ class SceneBuilder {
         this moveTo {
             angle = params.angle
             duration = params.duration
-            startDelay = params.startDelay
-            endDelay = params.endDelay
             ease = params.ease
         }
     }
@@ -88,6 +93,14 @@ class SceneBuilder {
         }
         startSwitch.complete(Unit)
         tasks.joinAll()
+    }
+
+    /**
+     * Allows the SceneBuilder to be invoked with the unary plus operator.
+     * Usage: `+sceneBuilder { ... }`
+     */
+    suspend operator fun unaryPlus() {
+        invoke()
     }
 
     /**

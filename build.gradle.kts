@@ -1,7 +1,7 @@
 import crackers.buildstuff.semver.SimpleSemverVersion
 
 plugins {
-    kotlin("jvm") version "2.3.0"
+    kotlin("jvm") version "2.4.21"
     idea
 //    id("org.jmailen.kotlinter") version "5.4.2"
     id("org.jetbrains.dokka") version "1.8.20"
@@ -15,7 +15,7 @@ repositories {
     mavenLocal()
 }
 
-val DIOZERO_VER = "1.4.1"
+val DIOZERO_VER = "1.4.2"
 val DEVICES_VER = "0.2+"
 val HASSK_VER = "0+"
 val KOTEST_VER = "6.0.3"

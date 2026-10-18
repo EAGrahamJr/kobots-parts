@@ -19,7 +19,6 @@ package crackers.kobots.parts.movement.async
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.runBlocking
 import kotlin.time.Duration.Companion.seconds
 
 class SceneBuilderTest : FunSpec(
@@ -32,27 +31,21 @@ class SceneBuilderTest : FunSpec(
         }
 
         test("moveTo adds a rotation action and executes it with correct parameters") {
-            val builder = sceneBuilder {
+            +sceneBuilder {
                 rotator moveTo {
                     angle = 90
                     duration = 1.seconds
                     ease = smooth
                 }
             }
-            runBlocking {
-                builder.play()
-            }
             coVerify { rotator.rotateAsync(90, 1.seconds, smooth) }
         }
 
         test("play executes all queued actions") {
             val rotator2 = mockk<AsyncServoRotator>(relaxed = true)
-            val builder = sceneBuilder {
+            +sceneBuilder {
                 rotator moveTo { angle = 45 }
                 rotator2 moveTo { angle = 135 }
-            }
-            runBlocking {
-                builder.play()
             }
             coVerify {
                 rotator.rotateAsync(45, any(), any())
@@ -61,20 +54,25 @@ class SceneBuilderTest : FunSpec(
         }
 
         test("moveTo uses default duration and ease if not set") {
-            val builder = sceneBuilder {
+            +sceneBuilder {
+                defaultDuration = 2.seconds
                 rotator moveTo { angle = 30 }
-            }
-            runBlocking {
-                builder.play()
             }
             coVerify { rotator.rotateAsync(30, 2.seconds, linear) }
         }
 
         test("play with no actions does not throw") {
             val builder = SceneBuilder()
-            runBlocking {
-                builder.play()
-            }
+            +builder
             // No exception expected
+        }
+
+        test("go with no args") {
+            +sceneBuilder {
+                defaultDuration = 2.seconds
+                rotator moveTo { angle = 30 }
+            }
+
+            coVerify { rotator.rotateAsync(30, 2.seconds, linear) }
         }
     })
